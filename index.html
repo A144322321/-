@@ -1061,6 +1061,7 @@ function renderFormSettings(){
   if(!settingsTemplateId || !DB.formTemplates.find(t=>t.id===settingsTemplateId)){
     settingsTemplateId = DB.formTemplates[0].id;
   }
+  const t0 = currentSettingsTemplate();
   document.getElementById('mainContent').innerHTML = `
   <div class="panel">
     <div class="section-head">
@@ -1074,12 +1075,20 @@ function renderFormSettings(){
     </div>
   </div>
   <div class="panel">
+    <h3>表單排版</h3>
+    <div class="grid3">
+      <div class="field"><label>車輛配備　每排幾個</label><input id="eqColumnsInput" type="number" min="1" max="10" value="${t0.eqColumns||5}" onchange="updateTemplateLayout()"></div>
+      <div class="field"><label>機能件檢查　每排幾個</label><input id="fcColumnsInput" type="number" min="1" max="10" value="${t0.fcColumns||5}" onchange="updateTemplateLayout()"></div>
+      <div class="field"><label>評價欄位名稱（例如：車體評價／結構評價）</label><input id="gradeLabelInput" value="${t0.bodyGradeLabel||'車體評價'}" onchange="updateTemplateLayout()"></div>
+    </div>
+  </div>
+  <div class="panel">
     <div class="section-head">
       <h3 style="border:none;margin:0;" id="eqPanelTitle">車輛配備項目設定</h3>
       <button class="btn btn-stamp btn-sm" onclick="addEquipmentItem()">＋ 新增配備項目</button>
     </div>
     <table>
-      <thead><tr><th>項目名稱</th><th>填寫方式</th><th>操作</th></tr></thead>
+      <thead><tr><th>順序</th><th>項目名稱</th><th>填寫方式</th><th>操作</th></tr></thead>
       <tbody id="eqSettingsBody"></tbody>
     </table>
   </div>
@@ -1089,8 +1098,18 @@ function renderFormSettings(){
       <button class="btn btn-stamp btn-sm" onclick="addFuncCheckItem()">＋ 新增檢查項目</button>
     </div>
     <table>
-      <thead><tr><th>項目名稱</th><th>操作</th></tr></thead>
+      <thead><tr><th>順序</th><th>項目名稱</th><th>操作</th></tr></thead>
       <tbody id="fcSettingsBody"></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="section-head">
+      <h3 style="border:none;margin:0;">自訂欄位設定（顯示在查定作業的「自訂欄位」分頁，並自動出現在 PDF 報告中）</h3>
+      <button class="btn btn-stamp btn-sm" onclick="addCustomField()">＋ 新增自訂欄位</button>
+    </div>
+    <table>
+      <thead><tr><th>欄位名稱</th><th>類型</th><th>操作</th></tr></thead>
+      <tbody id="cfSettingsBody"></tbody>
     </table>
   </div>
   <div class="panel">
@@ -1105,7 +1124,15 @@ function renderFormSettings(){
   renderTemplateTabs();
   renderEqSettings();
   renderFcSettings();
+  renderCustomFieldSettings();
   renderNoteSettings();
+}
+function updateTemplateLayout(){
+  const t = currentSettingsTemplate();
+  t.eqColumns = parseInt(document.getElementById('eqColumnsInput').value,10) || 5;
+  t.fcColumns = parseInt(document.getElementById('fcColumnsInput').value,10) || 5;
+  t.bodyGradeLabel = document.getElementById('gradeLabelInput').value.trim() || '車體評價';
+  saveDB(); toast('版面設定已更新');
 }
 function renderTemplateTabs(){
   const wrap = document.getElementById('templateTabsWrap');
@@ -1115,9 +1142,7 @@ function renderTemplateTabs(){
 }
 function switchSettingsTemplate(id){
   settingsTemplateId = id;
-  renderTemplateTabs();
-  renderEqSettings();
-  renderFcSettings();
+  renderFormSettings();
 }
 function currentSettingsTemplate(){
   return DB.formTemplates.find(t=>t.id===settingsTemplateId) || DB.formTemplates[0];
@@ -1130,8 +1155,11 @@ function addFormTemplate(){
   const newTemplate = {
     id: uid('tpl'),
     name: name.trim(),
+    eqColumns: base.eqColumns||5,
+    fcColumns: base.fcColumns||5,
     equipment: copyFrom ? JSON.parse(JSON.stringify(base.equipment)) : [],
-    funcChecks: copyFrom ? base.funcChecks.slice() : []
+    funcChecks: copyFrom ? base.funcChecks.slice() : [],
+    customFields: copyFrom ? JSON.parse(JSON.stringify(base.customFields||[])) : []
   };
   DB.formTemplates.push(newTemplate);
   settingsTemplateId = newTemplate.id;
@@ -1152,16 +1180,29 @@ function deleteFormTemplate(){
   settingsTemplateId = DB.formTemplates[0].id;
   saveDB(); renderFormSettings(); toast('已刪除查定表單');
 }
+function moveArrayItem(arr, from, to){
+  if(to<0 || to>=arr.length) return;
+  const [item] = arr.splice(from,1);
+  arr.splice(to,0,item);
+}
 function renderEqSettings(){
   const t = currentSettingsTemplate();
   document.getElementById('eqPanelTitle').textContent = '車輛配備項目設定（'+t.name+'）';
   const body = document.getElementById('eqSettingsBody');
   body.innerHTML = t.equipment.map((eq,i)=>`
     <tr>
+      <td data-label="順序" style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" ${i===0?'disabled':''} onclick="moveEquipmentItem(${i},-1)">↑</button>
+        <button class="btn btn-ghost btn-sm" ${i===t.equipment.length-1?'disabled':''} onclick="moveEquipmentItem(${i},1)">↓</button>
+      </td>
       <td data-label="項目名稱">${eq.label}</td>
       <td data-label="填寫方式">${eq.select? '<span class="badge badge-active">下拉選單（'+eq.select.join('／')+'）</span>' : (eq.qty? '<span class="badge badge-active">可填數量</span>' : '<span class="badge badge-off">單純勾選</span>')}</td>
       <td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeEquipmentItem(${i})">刪除</button></td>
-    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--ink-soft);">尚無項目</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="4" style="color:var(--ink-soft);">尚無項目</td></tr>';
+}
+function moveEquipmentItem(i, dir){
+  moveArrayItem(currentSettingsTemplate().equipment, i, i+dir);
+  saveDB(); renderEqSettings();
 }
 function addEquipmentItem(){
   const label = prompt('請輸入配備項目名稱');
@@ -1188,13 +1229,49 @@ function renderFcSettings(){
   const t = currentSettingsTemplate();
   const body = document.getElementById('fcSettingsBody');
   body.innerHTML = t.funcChecks.map((label,i)=>`
-    <tr><td data-label="項目名稱">${label}</td><td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeFuncCheckItem(${i})">刪除</button></td></tr>`).join('') || '<tr><td colspan="2" style="color:var(--ink-soft);">尚無項目</td></tr>';
+    <tr>
+      <td data-label="順序" style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" ${i===0?'disabled':''} onclick="moveFuncCheckItem(${i},-1)">↑</button>
+        <button class="btn btn-ghost btn-sm" ${i===t.funcChecks.length-1?'disabled':''} onclick="moveFuncCheckItem(${i},1)">↓</button>
+      </td>
+      <td data-label="項目名稱">${label}</td>
+      <td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeFuncCheckItem(${i})">刪除</button></td>
+    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--ink-soft);">尚無項目</td></tr>';
 }
-function addFuncCheckItem(){
-  const label = prompt('請輸入機能件檢查項目名稱');
+function moveFuncCheckItem(i, dir){
+  moveArrayItem(currentSettingsTemplate().funcChecks, i, i+dir);
+  saveDB(); renderFcSettings();
+}
+function renderCustomFieldSettings(){
+  const t = currentSettingsTemplate();
+  if(!t.customFields) t.customFields = [];
+  const body = document.getElementById('cfSettingsBody');
+  body.innerHTML = t.customFields.map((f,i)=>`
+    <tr>
+      <td data-label="欄位名稱">${f.label}</td>
+      <td data-label="類型">${f.type==='select' ? '下拉選單（'+(f.options||[]).join('／')+'）' : '文字輸入'}</td>
+      <td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeCustomField(${i})">刪除</button></td>
+    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--ink-soft);">尚無自訂欄位</td></tr>';
+}
+function addCustomField(){
+  const label = prompt('請輸入自訂欄位名稱（例如：驗車到期日、里程保證書編號…）');
   if(!label) return;
-  currentSettingsTemplate().funcChecks.push(label.trim());
-  saveDB(); renderFcSettings(); toast('已新增檢查項目');
+  const isSelect = confirm('這個欄位要用下拉選單嗎？（確定＝下拉選單／取消＝一般文字輸入）');
+  const t = currentSettingsTemplate();
+  if(!t.customFields) t.customFields = [];
+  if(isSelect){
+    const optionsRaw = prompt('請輸入選項，用逗號分隔（例如：是,否）');
+    const options = (optionsRaw||'').split(',').map(s=>s.trim()).filter(Boolean);
+    if(options.length===0){ toast('未輸入選項，已改為一般文字輸入'); t.customFields.push({id:uid('cf'), label:label.trim(), type:'text'}); }
+    else t.customFields.push({id:uid('cf'), label:label.trim(), type:'select', options});
+  }else{
+    t.customFields.push({id:uid('cf'), label:label.trim(), type:'text'});
+  }
+  saveDB(); renderCustomFieldSettings(); toast('已新增自訂欄位');
+}
+function removeCustomField(i){
+  if(!confirm('確定刪除此自訂欄位？已填寫的資料將不再顯示。')) return;
+  currentSettingsTemplate().customFields.splice(i,1); saveDB(); renderCustomFieldSettings();
 }
 function removeFuncCheckItem(i){
   if(!confirm('確定刪除此檢查項目？')) return;
@@ -1509,7 +1586,7 @@ function blankRecord(){
     mfgYear:'', mfgMonth:'', cc:'', drive:'2WD', doors:'4', wheelbase:'短軸',
     gear:'', fuel:'汽油',
     mileage:'', mileageUnit:'KM', warranty:false, noWarranty:false,
-    vin:'', engineNo:'', color:'', bodyType:'',
+    vin:'', engineNo:'', color:'', bodyType:'', customFields:{},
     equipment:{}, // key -> {checked, qty}
     functionChecks:{}, // key(index) -> true/false
     notes:[],
@@ -1539,6 +1616,7 @@ function getTemplateById(id){
     diagramLabelColor: '#1E5FA8',
     diagramLabelFontSize: (DB.pdfSettings && DB.pdfSettings.diagramLabelFontSize) || 28,
     hasBodyType: false,
+    customFields: [],
   }, t);
 }
 
@@ -1574,6 +1652,7 @@ async function renderInspectForm(existingId){
     <button class="tabbtn" data-tab="t3" onclick="switchTab('t3')">外觀及結構</button>
     <button class="tabbtn" data-tab="t4" onclick="switchTab('t4')">機能檢查與車況註記</button>
     <button class="tabbtn" data-tab="t5" onclick="switchTab('t5')">拍照</button>
+    <button class="tabbtn" data-tab="t6" onclick="switchTab('t6')">自訂欄位</button>
   </div>
 
   <div class="tabpane active" id="t1">
@@ -1698,6 +1777,16 @@ async function renderInspectForm(existingId){
     </div>
   </div>
 
+  <div class="tabpane" id="t6">
+    <div class="panel">
+      <div class="section-head">
+        <h3 style="border:none;margin:0;">自訂欄位</h3>
+        ${currentUser.role==='admin' ? `<button class="btn btn-ghost btn-sm" onclick="goto('form_settings')">前往新增自訂欄位</button>` : ''}
+      </div>
+      <div class="grid3" id="customFieldsGrid"></div>
+    </div>
+  </div>
+
   <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
     <button class="btn btn-ghost" onclick="goto('records')">取消</button>
     <button class="btn btn-blue" onclick="previewPDF()">預覽 PDF 報告</button>
@@ -1711,6 +1800,7 @@ async function renderInspectForm(existingId){
   buildNotePresets();
   renderNoteList();
   buildPhotoGrid();
+  buildCustomFieldsGrid();
   buildSymbolToolbar('symToolbarBody','bodyDiagramWrap');
   buildSymbolToolbar('symToolbarStruct','structDiagramWrap');
   attachDiagramClicks('bodyDiagramWrap','bodyMarks');
@@ -1740,8 +1830,10 @@ function onTemplateChange(){
   // selections don't carry over cleanly — start fresh for the newly chosen template.
   formRecord.equipment = {};
   formRecord.functionChecks = {};
+  formRecord.customFields = {};
   buildEquipmentGrid();
   buildFuncGrid();
+  buildCustomFieldsGrid();
   // 車身形式 only applies to templates that call for it (e.g. the 點檢表 template)
   const bodyTypeField = document.getElementById('bodyTypeField');
   if(bodyTypeField){
@@ -1986,6 +2078,25 @@ function buildPhotoGrid(){
       ${p ? `<img src="${p}"><span class="rm" onclick="event.stopPropagation();removePhoto(${i})">×</span>` : '無照片'}
     </div>`).join('');
 }
+function buildCustomFieldsGrid(){
+  const grid = document.getElementById('customFieldsGrid');
+  if(!grid) return;
+  const fields = activeTemplate.customFields || [];
+  if(fields.length===0){
+    grid.innerHTML = '<div style="color:var(--ink-soft);font-size:13px;grid-column:1/-1;">此查定表單尚未設定自訂欄位。可至「查定表單設定」新增（例如特殊車型才需要的欄位）。</div>';
+    return;
+  }
+  grid.innerHTML = fields.map(f=>{
+    const val = formRecord.customFields[f.id] || '';
+    if(f.type==='select'){
+      return `<div class="field"><label>${f.label}</label><select id="cf_${f.id}">
+        <option value="">請選擇</option>
+        ${(f.options||[]).map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+      </select></div>`;
+    }
+    return `<div class="field"><label>${f.label}</label><input id="cf_${f.id}" value="${val}"></div>`;
+  }).join('');
+}
 function pickPhoto(i){
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
@@ -2044,6 +2155,11 @@ async function saveRecord(){
   formRecord.panelCount = document.getElementById('f_panelCount').value;
   formRecord.tireTotal = document.getElementById('f_tireTotal').value;
   formRecord.tireCount = document.getElementById('f_tireCount').value;
+  formRecord.customFields = {};
+  (activeTemplate.customFields||[]).forEach(f=>{
+    const el = document.getElementById('cf_'+f.id);
+    if(el) formRecord.customFields[f.id] = el.value;
+  });
 
   if(!formRecord.plate){ toast('請輸入車牌號牌'); switchTab('t1'); return; }
 
@@ -2226,6 +2342,14 @@ function saveDispatch(){
 function svgToDataURL(svgString){
   return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
 }
+function buildCustomFieldsLine(record, template){
+  const fields = template.customFields || [];
+  const parts = fields
+    .map(f => ({label:f.label, val:(record.customFields||{})[f.id]}))
+    .filter(p => p.val);
+  if(parts.length===0) return '';
+  return `<div style="border:1px solid #000;border-top:none;padding:5px 10px;font-size:11px;">${parts.map(p=>`<b>${p.label}</b>：${p.val}`).join('　　')}</div>`;
+}
 function buildReportHTML(record, photos){
   const template = getTemplateById(record.templateId || DB.formTemplates[0].id);
   if(template.reportStyle === 'v2') return buildReportHTML_v2(record, photos, template);
@@ -2302,6 +2426,7 @@ function buildReportHTML_v1(record, photos, template){
 
     <div class="rp-block-title">車況輔助註記</div>
     <div class="rp-notes-box">${record.notes.map(n=>`<p>${n}。</p>`).join('') || ''}</div>
+    ${buildCustomFieldsLine(record, template)}
 
     <div class="rp-diagrams-row">
       <div class="rp-diagram-col">
@@ -2403,6 +2528,7 @@ function buildReportHTML_v2(record, photos, template){
         <div class="rp-block-title">檢查註記</div>
         <div class="rp2-notes-inline">建議鈑修片數：（<b>${record.panelCount||0}</b>）　建議輪胎更換數：（<b>${record.tireCount||0}</b>）1.6mm</div>
         <div class="rp-notes-box" style="min-height:60px;">${record.notes.map(n=>`<p>${n}。</p>`).join('') || ''}</div>
+        ${buildCustomFieldsLine(record, template)}
       </div>
       <div class="rp2-sign-block">
         <div class="rp2-sign-note">◎車身外觀與結構參照行將 SAA 方式寫</div>
@@ -2473,6 +2599,11 @@ function syncFormIntoRecordForPreview(){
     formRecord.panelCount = document.getElementById('f_panelCount').value;
     formRecord.tireTotal = document.getElementById('f_tireTotal').value;
     formRecord.tireCount = document.getElementById('f_tireCount').value;
+    formRecord.customFields = {};
+    (activeTemplate.customFields||[]).forEach(f=>{
+      const el = document.getElementById('cf_'+f.id);
+      if(el) formRecord.customFields[f.id] = el.value;
+    });
     formRecord.templateId = activeTemplate.id;
     activeTemplate.equipment.forEach(eq=>{
       const chk = document.getElementById('eqchk_'+eq.key);
