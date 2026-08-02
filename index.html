@@ -301,7 +301,7 @@ tr:hover td{background:#FAFAF5;}
 .rp-grade-val{font-size:28px;font-weight:900;font-family:var(--mono);margin-top:6px;}
 
 .rp-block-title{font-size:12px;font-weight:900;letter-spacing:3px;border:1px solid #000;border-bottom:none;background:#EEEEEE;padding:4px 10px;}
-.rp-chk-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px 6px;font-size:0.85em;border:1px solid #000;padding:5px 10px;margin-bottom:8px;}
+.rp-chk-grid{display:flex;flex-wrap:wrap;gap:2px 6px;font-size:0.85em;border:1px solid #000;padding:5px 10px;margin-bottom:8px;}
 .rp-chk-i{display:flex;align-items:center;gap:4px;padding:2px 0;white-space:normal;line-height:1.3;}
 .rp-box{font-size:13px;flex-shrink:0;}
 
@@ -332,9 +332,9 @@ tr:hover td{background:#FAFAF5;}
 .rp-bottom-item b{font-family:var(--mono);}
 .rp-inspector{margin-left:auto;}
 
-.rp-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-.rp-photos img{width:100%;aspect-ratio:4/3;object-fit:cover;border:1px solid #ccc;}
-.rp-photos .ph-empty{aspect-ratio:4/3;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:9px;color:#999;}
+.rp-photos{display:flex;flex-wrap:wrap;gap:8px;}
+.rp-photos img{width:calc(25% - 6px);height:133px;object-fit:cover;border:1px solid #ccc;}
+.rp-photos .ph-empty{width:calc(25% - 6px);height:133px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:9px;color:#999;}
 
 /* ---------- Responsive: tablet / mobile ---------- */
 #sidebarBackdrop{display:none;position:fixed;inset:0;background:rgba(15,17,30,0.5);z-index:140;}
@@ -550,21 +550,24 @@ function getFirebaseConfig(){
     return raw ? JSON.parse(raw) : null;
   }catch(e){ return null; }
 }
+let lastFirebaseError = null;
 async function initFirebase(){
   if(USE_CLOUD_STORAGE) return; // Claude's own storage takes priority when present
   const cfg = getFirebaseConfig();
   if(!cfg || !cfg.apiKey || !cfg.projectId) return;
   try{
-    if(typeof firebase === 'undefined') throw new Error('Firebase SDK 尚未載入（請確認網路連線）');
+    if(typeof firebase === 'undefined') throw new Error('Firebase SDK 尚未載入（請確認網路連線，或該網路是否封鎖 gstatic.com）');
     if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(cfg);
     firestoreDb = firebase.firestore();
     // touch the DB once so a bad config/permission problem surfaces now, not on first save
     await firestoreDb.collection(FIRESTORE_COLLECTION).doc('__connectivity_check__').get();
     USE_FIREBASE = true;
+    lastFirebaseError = null;
   }catch(e){
     console.error('Firebase init failed', e);
     USE_FIREBASE = false;
     firestoreDb = null;
+    lastFirebaseError = (e && (e.code ? (e.code+': '+e.message) : e.message)) || String(e);
   }
 }
 const Storage = {
@@ -745,6 +748,19 @@ async function loadDB(){
       t2.equipment = JSON.parse(JSON.stringify(TEMPLATE2_EQUIPMENT));
       t2.funcChecks = TEMPLATE2_FUNC_CHECKS.slice();
     }
+  }
+  // one-time migration: custom fields used to be one flat list per template, shown in a
+  // single fixed "自訂欄位" tab. Now each template can have MULTIPLE named custom tabs —
+  // wrap any already-defined flat fields into a single tab so nothing is lost.
+  if(!DB.migratedCustomTabs_v1){
+    DB.migratedCustomTabs_v1 = true;
+    DB.formTemplates.forEach(t=>{
+      if(t.customFields && t.customFields.length && !t.customTabs){
+        t.customTabs = [{id: uid('ctab'), name:'自訂欄位', fields: t.customFields}];
+      }
+      if(!t.customTabs) t.customTabs = [];
+      delete t.customFields;
+    });
   }
 
   DB.records = [];
@@ -1104,8 +1120,14 @@ function renderFormSettings(){
   </div>
   <div class="panel">
     <div class="section-head">
-      <h3 style="border:none;margin:0;">自訂欄位設定（顯示在查定作業的「自訂欄位」分頁，並自動出現在 PDF 報告中）</h3>
-      <button class="btn btn-stamp btn-sm" onclick="addCustomField()">＋ 新增自訂欄位</button>
+      <h3 style="border:none;margin:0;">自訂欄位設定（每個標籤會成為查定作業表單中一個新的分頁，並自動出現在 PDF 報告中）</h3>
+      <button class="btn btn-stamp btn-sm" onclick="addCustomTab()">＋ 新增標籤</button>
+    </div>
+    <div class="chipwrap" id="cfTabsWrap"></div>
+    <div id="cfTabActions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="btn btn-ghost btn-sm" onclick="renameCustomTab()">重新命名此標籤</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteCustomTab()">刪除此標籤</button>
+      <button class="btn btn-blue btn-sm" onclick="addCustomField()" style="margin-left:auto;">＋ 新增此標籤的欄位</button>
     </div>
     <table>
       <thead><tr><th>欄位名稱</th><th>類型</th><th>操作</th></tr></thead>
@@ -1142,6 +1164,7 @@ function renderTemplateTabs(){
 }
 function switchSettingsTemplate(id){
   settingsTemplateId = id;
+  settingsCustomTabId = null;
   renderFormSettings();
 }
 function currentSettingsTemplate(){
@@ -1159,7 +1182,7 @@ function addFormTemplate(){
     fcColumns: base.fcColumns||5,
     equipment: copyFrom ? JSON.parse(JSON.stringify(base.equipment)) : [],
     funcChecks: copyFrom ? base.funcChecks.slice() : [],
-    customFields: copyFrom ? JSON.parse(JSON.stringify(base.customFields||[])) : []
+    customTabs: copyFrom ? JSON.parse(JSON.stringify(base.customTabs||[])) : []
   };
   DB.formTemplates.push(newTemplate);
   settingsTemplateId = newTemplate.id;
@@ -1242,36 +1265,90 @@ function moveFuncCheckItem(i, dir){
   moveArrayItem(currentSettingsTemplate().funcChecks, i, i+dir);
   saveDB(); renderFcSettings();
 }
+let settingsCustomTabId = null; // which custom tab is currently being edited
 function renderCustomFieldSettings(){
   const t = currentSettingsTemplate();
-  if(!t.customFields) t.customFields = [];
+  if(!t.customTabs) t.customTabs = [];
+  if(t.customTabs.length && (!settingsCustomTabId || !t.customTabs.find(x=>x.id===settingsCustomTabId))){
+    settingsCustomTabId = t.customTabs[0].id;
+  }
+  const wrap = document.getElementById('cfTabsWrap');
+  if(wrap){
+    wrap.innerHTML = t.customTabs.map(tab=>`
+      <span class="chip ${tab.id===settingsCustomTabId?'on':''}" onclick="switchSettingsCustomTab('${tab.id}')">${tab.name}</span>
+    `).join('') || '<span style="color:var(--ink-soft);font-size:12px;">尚未新增任何標籤</span>';
+  }
+  const tabActions = document.getElementById('cfTabActions');
+  const currentTab = t.customTabs.find(x=>x.id===settingsCustomTabId);
+  if(tabActions) tabActions.style.display = currentTab ? '' : 'none';
   const body = document.getElementById('cfSettingsBody');
-  body.innerHTML = t.customFields.map((f,i)=>`
+  if(!body) return;
+  if(!currentTab){
+    body.innerHTML = '<tr><td colspan="3" style="color:var(--ink-soft);">請先新增一個標籤</td></tr>';
+    return;
+  }
+  body.innerHTML = currentTab.fields.map((f,i)=>`
     <tr>
       <td data-label="欄位名稱">${f.label}</td>
       <td data-label="類型">${f.type==='select' ? '下拉選單（'+(f.options||[]).join('／')+'）' : '文字輸入'}</td>
       <td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeCustomField(${i})">刪除</button></td>
-    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--ink-soft);">尚無自訂欄位</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--ink-soft);">此標籤尚無欄位</td></tr>';
+}
+function switchSettingsCustomTab(id){
+  settingsCustomTabId = id;
+  renderCustomFieldSettings();
+}
+function addCustomTab(){
+  const name = prompt('請輸入新標籤名稱（例如：保養紀錄、驗車資訊…）');
+  if(!name) return;
+  const t = currentSettingsTemplate();
+  if(!t.customTabs) t.customTabs = [];
+  const newTab = {id:uid('ctab'), name:name.trim(), fields:[]};
+  t.customTabs.push(newTab);
+  settingsCustomTabId = newTab.id;
+  saveDB(); renderCustomFieldSettings(); toast('已新增標籤：'+newTab.name);
+}
+function renameCustomTab(){
+  const t = currentSettingsTemplate();
+  const tab = t.customTabs.find(x=>x.id===settingsCustomTabId);
+  if(!tab) return;
+  const name = prompt('重新命名標籤', tab.name);
+  if(!name) return;
+  tab.name = name.trim();
+  saveDB(); renderCustomFieldSettings(); toast('已更新標籤名稱');
+}
+function deleteCustomTab(){
+  const t = currentSettingsTemplate();
+  const tab = t.customTabs.find(x=>x.id===settingsCustomTabId);
+  if(!tab) return;
+  if(!confirm('確定刪除標籤「'+tab.name+'」？此標籤內所有欄位設定將一併刪除。')) return;
+  t.customTabs = t.customTabs.filter(x=>x.id!==tab.id);
+  settingsCustomTabId = null;
+  saveDB(); renderCustomFieldSettings(); toast('已刪除標籤');
 }
 function addCustomField(){
+  const t = currentSettingsTemplate();
+  const tab = t.customTabs.find(x=>x.id===settingsCustomTabId);
+  if(!tab){ toast('請先新增一個標籤'); return; }
   const label = prompt('請輸入自訂欄位名稱（例如：驗車到期日、里程保證書編號…）');
   if(!label) return;
   const isSelect = confirm('這個欄位要用下拉選單嗎？（確定＝下拉選單／取消＝一般文字輸入）');
-  const t = currentSettingsTemplate();
-  if(!t.customFields) t.customFields = [];
   if(isSelect){
     const optionsRaw = prompt('請輸入選項，用逗號分隔（例如：是,否）');
     const options = (optionsRaw||'').split(',').map(s=>s.trim()).filter(Boolean);
-    if(options.length===0){ toast('未輸入選項，已改為一般文字輸入'); t.customFields.push({id:uid('cf'), label:label.trim(), type:'text'}); }
-    else t.customFields.push({id:uid('cf'), label:label.trim(), type:'select', options});
+    if(options.length===0){ toast('未輸入選項，已改為一般文字輸入'); tab.fields.push({id:uid('cf'), label:label.trim(), type:'text'}); }
+    else tab.fields.push({id:uid('cf'), label:label.trim(), type:'select', options});
   }else{
-    t.customFields.push({id:uid('cf'), label:label.trim(), type:'text'});
+    tab.fields.push({id:uid('cf'), label:label.trim(), type:'text'});
   }
   saveDB(); renderCustomFieldSettings(); toast('已新增自訂欄位');
 }
 function removeCustomField(i){
   if(!confirm('確定刪除此自訂欄位？已填寫的資料將不再顯示。')) return;
-  currentSettingsTemplate().customFields.splice(i,1); saveDB(); renderCustomFieldSettings();
+  const t = currentSettingsTemplate();
+  const tab = t.customTabs.find(x=>x.id===settingsCustomTabId);
+  if(!tab) return;
+  tab.fields.splice(i,1); saveDB(); renderCustomFieldSettings();
 }
 function removeFuncCheckItem(i){
   if(!confirm('確定刪除此檢查項目？')) return;
@@ -1356,10 +1433,14 @@ function renderCloudSettings(){
     : USE_FIREBASE
       ? '<span class="badge badge-active">已連線 Firebase 雲端資料庫</span>'
       : '<span class="badge badge-off">目前僅使用本機儲存（未跨裝置共用）</span>';
+  const startupErrorNotice = (!USE_CLOUD_STORAGE && !USE_FIREBASE && cfg.apiKey && lastFirebaseError)
+    ? `<p style="font-size:12px;color:var(--danger);background:#FBEDEA;border:1px solid var(--stamp);padding:8px 10px;border-radius:4px;margin-top:10px;">已儲存的設定目前連線失敗：<span class="mono">${lastFirebaseError}</span></p>`
+    : '';
   document.getElementById('mainContent').innerHTML = `
   <div class="panel">
     <h3>雲端同步狀態</h3>
     <p style="margin:0 0 14px;">${statusBadge}</p>
+    ${startupErrorNotice}
     ${USE_CLOUD_STORAGE ? `<p style="font-size:12.5px;color:var(--ink-soft);">目前是在 Claude.ai 的檔案預覽環境中執行，已自動使用其內建的雲端儲存，不需要另外設定。</p>` : `
     <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.8;">
       這個系統是一個獨立的 HTML 檔案，本身沒有伺服器，所以沒辦法讓不同電腦、不同人員自動共用資料，除非您接上一個「雲端資料庫」。<br>
@@ -1372,7 +1453,9 @@ function renderCloudSettings(){
     <h3>設定步驟</h3>
     <ol style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);">
       <li>前往 <a href="https://console.firebase.google.com" target="_blank" rel="noopener">Firebase 主控台</a>，登入 Google 帳號並「新增專案」</li>
-      <li>建立完成後，左側選單點「Firestore Database」→「建立資料庫」，模式選「測試模式」（之後可再收緊權限）</li>
+      <li>建立完成後，左側選單點「Firestore Database」→「建立資料庫」，模式選「測試模式」（之後可再收緊權限）<br>
+        <b style="color:var(--stamp);">⚠️ 左側選單容易跟「Realtime Database」搞混，請確認點的是「Firestore Database」，不是「Realtime Database」——如果連線設定裡出現 <span class="mono">databaseURL</span> 這個欄位，通常就代表建立到 Realtime Database 去了，本系統用的是 Firestore，兩者不是同一個服務。</b>
+      </li>
       <li>回到「專案總覽」，點網頁圖示（&lt;/&gt;）新增一個「網頁應用程式」，取個名稱即可</li>
       <li>系統會顯示一段 <span class="mono">firebaseConfig</span> 設定，把裡面的值分別填到下方欄位</li>
       <li>儲存後，其他電腦／查定師只要在各自的裝置上，用同一組設定填寫這頁，就會共用同一份資料</li>
@@ -1419,15 +1502,24 @@ async function saveFirebaseConfigAndReload(){
   const msg = document.getElementById('cloudSettingsMsg');
   msg.textContent = '連線測試中…'; msg.style.color = 'var(--ink-soft)';
   localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(cfg));
+  // reset any previous app instance so a config correction actually takes effect
+  USE_FIREBASE = false; firestoreDb = null;
+  try{ if(typeof firebase !== 'undefined' && firebase.apps){ await Promise.all(firebase.apps.map(a=>a.delete())); } }catch(e){}
   await initFirebase();
   if(USE_FIREBASE){
-    msg.textContent = '✅ 連線成功！正在重新載入資料…';
+    msg.innerHTML = '✅ 連線成功！正在重新載入資料…';
     msg.style.color = 'var(--ok)';
     await loadDB();
     toast('已連線 Firebase 雲端資料庫');
     setTimeout(()=>location.reload(), 800);
   }else{
-    msg.textContent = '❌ 連線失敗，請確認設定內容、Firestore 是否已建立資料庫、以及網路連線後再試一次。';
+    const err = lastFirebaseError || '未知錯誤';
+    let hint = '';
+    if(/permission-denied/i.test(err)) hint = '→ 這通常代表 Firestore 的「安全性規則」還沒開放讀寫，請到 Firebase 主控台 Firestore Database → Rules，改成本頁下方提供的規則範例。';
+    else if(/not[- ]found|NOT_FOUND/i.test(err) || /database.*does not exist/i.test(err)) hint = '→ 這通常代表這個專案裡「還沒建立 Firestore 資料庫」。請到 Firebase 主控台左側選單「Firestore Database」→「建立資料庫」（不是 Realtime Database）。';
+    else if(/api[- ]?key/i.test(err)) hint = '→ 請確認 apiKey 是否完整複製，沒有多餘的空白或缺字。';
+    else hint = '→ 請確認網路連線、以及各欄位是否完整複製自 Firebase 主控台的設定內容。';
+    msg.innerHTML = '❌ 連線失敗：<span class="mono">'+err+'</span><br>'+hint;
     msg.style.color = 'var(--danger)';
   }
 }
@@ -1616,7 +1708,7 @@ function getTemplateById(id){
     diagramLabelColor: '#1E5FA8',
     diagramLabelFontSize: (DB.pdfSettings && DB.pdfSettings.diagramLabelFontSize) || 28,
     hasBodyType: false,
-    customFields: [],
+    customTabs: [],
   }, t);
 }
 
@@ -1646,13 +1738,12 @@ async function renderInspectForm(existingId){
         </div>` : '';
 
   document.getElementById('mainContent').innerHTML = `
-  <div class="tabbar">
+  <div class="tabbar" id="mainTabbar">
     <button class="tabbtn active" data-tab="t1" onclick="switchTab('t1')">車輛基本資訊</button>
     <button class="tabbtn" data-tab="t2" onclick="switchTab('t2')">車輛配備</button>
     <button class="tabbtn" data-tab="t3" onclick="switchTab('t3')">外觀及結構</button>
     <button class="tabbtn" data-tab="t4" onclick="switchTab('t4')">機能檢查與車況註記</button>
     <button class="tabbtn" data-tab="t5" onclick="switchTab('t5')">拍照</button>
-    <button class="tabbtn" data-tab="t6" onclick="switchTab('t6')">自訂欄位</button>
   </div>
 
   <div class="tabpane active" id="t1">
@@ -1777,15 +1868,7 @@ async function renderInspectForm(existingId){
     </div>
   </div>
 
-  <div class="tabpane" id="t6">
-    <div class="panel">
-      <div class="section-head">
-        <h3 style="border:none;margin:0;">自訂欄位</h3>
-        ${currentUser.role==='admin' ? `<button class="btn btn-ghost btn-sm" onclick="goto('form_settings')">前往新增自訂欄位</button>` : ''}
-      </div>
-      <div class="grid3" id="customFieldsGrid"></div>
-    </div>
-  </div>
+  <div id="customTabPanes"></div>
 
   <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
     <button class="btn btn-ghost" onclick="goto('records')">取消</button>
@@ -1800,7 +1883,7 @@ async function renderInspectForm(existingId){
   buildNotePresets();
   renderNoteList();
   buildPhotoGrid();
-  buildCustomFieldsGrid();
+  buildCustomTabs();
   buildSymbolToolbar('symToolbarBody','bodyDiagramWrap');
   buildSymbolToolbar('symToolbarStruct','structDiagramWrap');
   attachDiagramClicks('bodyDiagramWrap','bodyMarks');
@@ -1833,7 +1916,7 @@ function onTemplateChange(){
   formRecord.customFields = {};
   buildEquipmentGrid();
   buildFuncGrid();
-  buildCustomFieldsGrid();
+  buildCustomTabs();
   // 車身形式 only applies to templates that call for it (e.g. the 點檢表 template)
   const bodyTypeField = document.getElementById('bodyTypeField');
   if(bodyTypeField){
@@ -2078,24 +2161,47 @@ function buildPhotoGrid(){
       ${p ? `<img src="${p}"><span class="rm" onclick="event.stopPropagation();removePhoto(${i})">×</span>` : '無照片'}
     </div>`).join('');
 }
-function buildCustomFieldsGrid(){
-  const grid = document.getElementById('customFieldsGrid');
-  if(!grid) return;
-  const fields = activeTemplate.customFields || [];
-  if(fields.length===0){
-    grid.innerHTML = '<div style="color:var(--ink-soft);font-size:13px;grid-column:1/-1;">此查定表單尚未設定自訂欄位。可至「查定表單設定」新增（例如特殊車型才需要的欄位）。</div>';
-    return;
-  }
-  grid.innerHTML = fields.map(f=>{
-    const val = formRecord.customFields[f.id] || '';
-    if(f.type==='select'){
-      return `<div class="field"><label>${f.label}</label><select id="cf_${f.id}">
-        <option value="">請選擇</option>
-        ${(f.options||[]).map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
-      </select></div>`;
-    }
-    return `<div class="field"><label>${f.label}</label><input id="cf_${f.id}" value="${val}"></div>`;
-  }).join('');
+function buildCustomTabs(){
+  // remove any previously injected custom tab buttons before rebuilding (template switch, etc.)
+  document.querySelectorAll('#mainTabbar .custom-tab-btn').forEach(b=>b.remove());
+  const paneContainer = document.getElementById('customTabPanes');
+  if(!paneContainer) return;
+  paneContainer.innerHTML = '';
+  const tabbar = document.getElementById('mainTabbar');
+  const tabs = activeTemplate.customTabs || [];
+
+  tabs.forEach(tab=>{
+    const tabId = 'ct_'+tab.id;
+    const btn = document.createElement('button');
+    btn.className = 'tabbtn custom-tab-btn';
+    btn.dataset.tab = tabId;
+    btn.textContent = tab.name;
+    btn.onclick = ()=>switchTab(tabId);
+    tabbar.appendChild(btn);
+
+    const fieldsHtml = (tab.fields||[]).map(f=>{
+      const val = formRecord.customFields[f.id] || '';
+      if(f.type==='select'){
+        return `<div class="field"><label>${f.label}</label><select id="cf_${f.id}">
+          <option value="">請選擇</option>
+          ${(f.options||[]).map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+        </select></div>`;
+      }
+      return `<div class="field"><label>${f.label}</label><input id="cf_${f.id}" value="${val}"></div>`;
+    }).join('') || '<div style="color:var(--ink-soft);font-size:13px;grid-column:1/-1;">此標籤尚未設定任何欄位。可至「查定表單設定」新增。</div>';
+
+    const pane = document.createElement('div');
+    pane.className = 'tabpane';
+    pane.id = tabId;
+    pane.innerHTML = `<div class="panel">
+      <div class="section-head">
+        <h3 style="border:none;margin:0;">${tab.name}</h3>
+        ${currentUser.role==='admin' ? `<button class="btn btn-ghost btn-sm" onclick="goto('form_settings')">前往編輯此標籤</button>` : ''}
+      </div>
+      <div class="grid3">${fieldsHtml}</div>
+    </div>`;
+    paneContainer.appendChild(pane);
+  });
 }
 function pickPhoto(i){
   const inp = document.createElement('input');
@@ -2156,7 +2262,7 @@ async function saveRecord(){
   formRecord.tireTotal = document.getElementById('f_tireTotal').value;
   formRecord.tireCount = document.getElementById('f_tireCount').value;
   formRecord.customFields = {};
-  (activeTemplate.customFields||[]).forEach(f=>{
+  (activeTemplate.customTabs||[]).flatMap(t=>t.fields||[]).forEach(f=>{
     const el = document.getElementById('cf_'+f.id);
     if(el) formRecord.customFields[f.id] = el.value;
   });
@@ -2343,12 +2449,16 @@ function svgToDataURL(svgString){
   return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
 }
 function buildCustomFieldsLine(record, template){
-  const fields = template.customFields || [];
-  const parts = fields
-    .map(f => ({label:f.label, val:(record.customFields||{})[f.id]}))
-    .filter(p => p.val);
-  if(parts.length===0) return '';
-  return `<div style="border:1px solid #000;border-top:none;padding:5px 10px;font-size:11px;">${parts.map(p=>`<b>${p.label}</b>：${p.val}`).join('　　')}</div>`;
+  const tabs = template.customTabs || [];
+  const lines = tabs.map(tab=>{
+    const parts = (tab.fields||[])
+      .map(f => ({label:f.label, val:(record.customFields||{})[f.id]}))
+      .filter(p => p.val);
+    if(parts.length===0) return '';
+    const prefix = tabs.length>1 ? `<b>【${tab.name}】</b>　` : '';
+    return `<div style="border:1px solid #000;border-top:none;padding:5px 10px;font-size:11px;">${prefix}${parts.map(p=>`<b>${p.label}</b>：${p.val}`).join('　　')}</div>`;
+  }).filter(Boolean);
+  return lines.join('');
 }
 function buildReportHTML(record, photos){
   const template = getTemplateById(record.templateId || DB.formTemplates[0].id);
@@ -2358,10 +2468,13 @@ function buildReportHTML(record, photos){
 function buildReportHTML_v1(record, photos, template){
   const eqOn = k => record.equipment[k] && record.equipment[k].checked;
   const eqQty = k => (record.equipment[k] && record.equipment[k].qty) ? '（'+record.equipment[k].qty+'）' : '';
+  const eqCols = template.eqColumns||5, fcCols = template.fcColumns||5;
+  const eqW = `calc((100% - ${(eqCols-1)*6}px)/${eqCols})`;
+  const fcW = `calc((100% - ${(fcCols-1)*6}px)/${fcCols})`;
   const eqCells = template.equipment.map(eq=>`
-    <div class="rp-chk-i"><span class="rp-box">${eqOn(eq.key)?'☑':'☐'}</span>${eq.label}${eqQty(eq.key)}</div>`).join('');
+    <div class="rp-chk-i" style="flex:0 0 ${eqW};max-width:${eqW};"><span class="rp-box">${eqOn(eq.key)?'☑':'☐'}</span>${eq.label}${eqQty(eq.key)}</div>`).join('');
   const fcCells = template.funcChecks.map((label,i)=>`
-    <div class="rp-chk-i"><span class="rp-box">${record.functionChecks[i]?'☑':'☐'}</span>${label}</div>`).join('');
+    <div class="rp-chk-i" style="flex:0 0 ${fcW};max-width:${fcW};"><span class="rp-box">${record.functionChecks[i]?'☑':'☐'}</span>${label}</div>`).join('');
   const bodySVG = template.diagramBody;
   const structSVG = template.diagramStructure;
   const S = DB.pdfSettings || {};
@@ -2457,10 +2570,13 @@ function buildReportHTML_v1(record, photos, template){
 function buildReportHTML_v2(record, photos, template){
   const eqOn = k => record.equipment[k] && record.equipment[k].checked;
   const eqQty = k => (record.equipment[k] && record.equipment[k].qty) ? '（'+record.equipment[k].qty+'）' : '';
+  const eqCols = template.eqColumns||5, fcCols = template.fcColumns||5;
+  const eqW = `calc((100% - ${(eqCols-1)*6}px)/${eqCols})`;
+  const fcW = `calc((100% - ${(fcCols-1)*6}px)/${fcCols})`;
   const eqCells = template.equipment.map(eq=>`
-    <div class="rp-chk-i"><span class="rp-box">${eqOn(eq.key)?'☑':'☐'}</span>${eq.label}${eqQty(eq.key)}</div>`).join('');
+    <div class="rp-chk-i" style="flex:0 0 ${eqW};max-width:${eqW};"><span class="rp-box">${eqOn(eq.key)?'☑':'☐'}</span>${eq.label}${eqQty(eq.key)}</div>`).join('');
   const fcCells = template.funcChecks.map((label,i)=>`
-    <div class="rp-chk-i"><span class="rp-box">${record.functionChecks[i]?'☑':'☐'}</span>${label}</div>`).join('');
+    <div class="rp-chk-i" style="flex:0 0 ${fcW};max-width:${fcW};"><span class="rp-box">${record.functionChecks[i]?'☑':'☐'}</span>${label}</div>`).join('');
   const bodySVG = template.diagramBody;
   const structSVG = template.diagramStructure;
   const S = DB.pdfSettings || {};
@@ -2508,7 +2624,7 @@ function buildReportHTML_v2(record, photos, template){
       </tr>
     </table>
 
-    <div class="rp-chk-grid" style="grid-template-columns:repeat(${template.eqColumns||7},1fr);border-top:1px solid #000;">${eqCells}</div>
+    <div class="rp-chk-grid" style="border-top:1px solid #000;">${eqCells}</div>
 
     <div class="rp-diagrams-row">
       <div class="rp-diagram-col">
@@ -2521,7 +2637,7 @@ function buildReportHTML_v2(record, photos, template){
       </div>
     </div>
 
-    <div class="rp-chk-grid" style="grid-template-columns:repeat(${template.fcColumns||4},1fr);">${fcCells}</div>
+    <div class="rp-chk-grid">${fcCells}</div>
 
     <div class="rp2-bottom-row">
       <div class="rp2-notes-block">
@@ -2600,7 +2716,7 @@ function syncFormIntoRecordForPreview(){
     formRecord.tireTotal = document.getElementById('f_tireTotal').value;
     formRecord.tireCount = document.getElementById('f_tireCount').value;
     formRecord.customFields = {};
-    (activeTemplate.customFields||[]).forEach(f=>{
+    (activeTemplate.customTabs||[]).flatMap(t=>t.fields||[]).forEach(f=>{
       const el = document.getElementById('cf_'+f.id);
       if(el) formRecord.customFields[f.id] = el.value;
     });
@@ -2660,7 +2776,15 @@ async function downloadPDFForRecord(id){
     container.innerHTML = html;
     container.style.top = '0px'; container.style.left = '0px'; container.style.zIndex = '-1';
     container.style.position = 'fixed'; container.style.opacity = '0'; container.style.pointerEvents = 'none';
-    await new Promise(r=>setTimeout(r,250));
+    // Wait for the actual web fonts (Noto Sans TC etc.) to finish loading before capturing.
+    // Google Fonts use font-display:swap, so the page briefly renders with a fallback font
+    // and then swaps once the real font arrives — if html2canvas captures during that
+    // fallback window, text metrics differ from what's shown on screen and things can
+    // shift/overflow/misalign in the resulting PDF even though the live preview looks fine.
+    try{
+      if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,300));
 
     // capture EVERY .rp-page (main form + photo appendix) instead of just the first one
     const pages = Array.from(container.querySelectorAll('.rp-page'));
