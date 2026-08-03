@@ -414,7 +414,7 @@ tr:hover td{background:#FAFAF5;}
       <label>密碼</label>
       <input id="loginPass" type="password" autocomplete="current-password" placeholder="請輸入密碼">
     </div>
-    <button class="btn btn-primary" onclick="doLogin()">登入系統</button>
+    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()" disabled>系統載入中…</button>
     <div class="login-err" id="loginErr"></div>
     <div class="login-hint">預設管理員帳號 admin／密碼 admin</div>
   </div>
@@ -551,6 +551,12 @@ function getFirebaseConfig(){
   }catch(e){ return null; }
 }
 let lastFirebaseError = null;
+function withTimeout(promise, ms, timeoutMessage){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(()=>reject(new Error(timeoutMessage||('逾時（超過 '+ms+'ms 未回應）'))), ms))
+  ]);
+}
 async function initFirebase(){
   if(USE_CLOUD_STORAGE) return; // Claude's own storage takes priority when present
   const cfg = getFirebaseConfig();
@@ -559,8 +565,16 @@ async function initFirebase(){
     if(typeof firebase === 'undefined') throw new Error('Firebase SDK 尚未載入（請確認網路連線，或該網路是否封鎖 gstatic.com）');
     if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(cfg);
     firestoreDb = firebase.firestore();
-    // touch the DB once so a bad config/permission problem surfaces now, not on first save
-    await firestoreDb.collection(FIRESTORE_COLLECTION).doc('__connectivity_check__').get();
+    // touch the DB once so a bad config/permission problem surfaces now, not on first save.
+    // IMPORTANT: this is wrapped in a hard timeout — without one, a misconfigured project
+    // (bad security rules, wrong database type, network issues) can leave this hanging
+    // indefinitely, which previously blocked loadDB() from EVER running and silently broke
+    // login entirely (DB stayed null, so clicking "登入" threw and did nothing visible).
+    await withTimeout(
+      firestoreDb.collection(FIRESTORE_COLLECTION).doc('__connectivity_check__').get(),
+      6000,
+      '連線逾時（6 秒內未回應，請確認網路連線或 Firebase 專案設定）'
+    );
     USE_FIREBASE = true;
     lastFirebaseError = null;
   }catch(e){
@@ -898,6 +912,10 @@ function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9
 let currentUser = null;
 
 async function doLogin(){
+  if(!DB){
+    document.getElementById('loginErr').textContent = '系統仍在載入中，請稍候幾秒再試一次';
+    return;
+  }
   const u = document.getElementById('loginUser').value.trim();
   const p = document.getElementById('loginPass').value;
   const err = document.getElementById('loginErr');
@@ -2863,11 +2881,35 @@ function showPdfReadyModal(dataUri, filename){
    INIT
    ============================================================ */
 (async function init(){
+  // Safety net: no matter what goes wrong during startup (Firebase hanging despite its
+  // own timeout, some other unexpected slow call, etc.), the login button must become
+  // usable within a bounded time. If normal init hasn't finished by then, fall back to
+  // an in-memory default DB so the built-in admin/admin account still works — better a
+  // temporarily-degraded local session than a login screen that never responds.
+  const startupTimeout = setTimeout(()=>{
+    if(!DB){
+      console.warn('startup taking too long — falling back to default DB so login still works');
+      DB = defaultDB();
+      DB.equipment = JSON.parse(JSON.stringify(DEFAULT_EQUIPMENT));
+      DB.funcChecks = DEFAULT_FUNC_CHECKS.slice();
+      DB.formTemplates = [{ id:'tpl_default', name:'標準查定表', equipment: DB.equipment, funcChecks: DB.funcChecks }];
+      DB._storageUnavailable = true;
+    }
+    enableLoginButton();
+  }, 9000);
+
   await initFirebase();
   await loadDB();
+  clearTimeout(startupTimeout);
+  enableLoginButton();
+
   document.getElementById('loginUser').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
   document.getElementById('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 })();
+function enableLoginButton(){
+  const btn = document.getElementById('loginBtn');
+  if(btn){ btn.disabled = false; btn.textContent = '登入系統'; }
+}
 </script>
 </body>
 </html>
