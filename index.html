@@ -362,6 +362,10 @@ tr:hover td{background:#FAFAF5;}
   .grid4{grid-template-columns:repeat(2,1fr);}
   .grid5{grid-template-columns:repeat(2,1fr);}
   .grid7{grid-template-columns:repeat(3,1fr);}
+  /* #eqGrid/#fcGrid get their column count set via inline style from JS (so the PDF
+     report's configured column count doesn't affect the live editing UI) — inline
+     styles otherwise beat this media query, hence the !important overrides here. */
+  #eqGrid, #fcGrid{grid-template-columns:repeat(3,1fr) !important;}
   .rec-grid{grid-template-columns:1fr;}
   .photo-grid{grid-template-columns:repeat(3,minmax(80px,1fr));}
   .tabbar{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;}
@@ -383,6 +387,7 @@ tr:hover td{background:#FAFAF5;}
 @media (max-width: 480px){
   .grid3,.grid4,.grid5{grid-template-columns:1fr;}
   .grid7{grid-template-columns:repeat(2,1fr);}
+  #eqGrid, #fcGrid{grid-template-columns:repeat(2,1fr) !important;}
   .photo-grid{grid-template-columns:repeat(2,minmax(70px,1fr));}
   .login-card{width:100%;padding:32px 22px 26px;}
   .rec-card .actions{flex-direction:column;}
@@ -416,7 +421,7 @@ tr:hover td{background:#FAFAF5;}
     </div>
     <button class="btn btn-primary" id="loginBtn" onclick="doLogin()" disabled>系統載入中…</button>
     <div class="login-err" id="loginErr"></div>
-    <div class="login-hint">預設管理員帳號 admin／密碼 admin</div>
+    
   </div>
 </div>
 
@@ -430,7 +435,7 @@ tr:hover td{background:#FAFAF5;}
     <nav class="navlist" id="navlist"></nav>
     <div class="sidebar-foot">
       <div class="who" id="whoami">-</div>
-      <a onclick="logout()">登出系統</a>
+      <a onclick="openMyPwdModal()">修改我的密碼</a>　<a onclick="logout()">登出系統</a>
     </div>
   </aside>
   <div id="sidebarBackdrop" onclick="closeSidebarMobile()"></div>
@@ -468,7 +473,7 @@ let DB = null;
 function defaultDB(){
   return {
     accounts:[
-      {id:'u1', username:'admin', password:'admin', name:'系統管理員', role:'admin', active:true}
+      {id:'u1', username:'k1203', password:'1234', name:'系統管理員', role:'admin', active:true}
     ],
     brands:{
       "AUDI":["A3","A4","A6","Q3","Q5","Q7"],
@@ -763,6 +768,17 @@ async function loadDB(){
       t2.funcChecks = TEMPLATE2_FUNC_CHECKS.slice();
     }
   }
+  // one-time migration: the default account used to be admin/admin — replace it with the
+  // requested k1203/1234 account. Guarded so it only runs once and won't re-add k1203 if
+  // the admin later renames/removes it themselves.
+  if(!DB.migratedDefaultAccount_k1203){
+    DB.migratedDefaultAccount_k1203 = true;
+    const oldAdmin = DB.accounts.find(a=>a.username==='admin');
+    if(oldAdmin && !DB.accounts.find(a=>a.username==='k1203')){
+      oldAdmin.username = 'k1203';
+      oldAdmin.password = '1234';
+    }
+  }
   // one-time migration: custom fields used to be one flat list per template, shown in a
   // single fixed "自訂欄位" tab. Now each template can have MULTIPLE named custom tabs —
   // wrap any already-defined flat fields into a single tab so nothing is lost.
@@ -1009,16 +1025,42 @@ function goto(key, param){
    ============================================================ */
 function renderDashboard(){
   const total = DB.records.length;
-  const thisMonth = DB.records.filter(r=>{
-    const d = new Date(r.createdAt); const n = new Date();
-    return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();
-  }).length;
+  const now = new Date();
+  const thisMonthRecords = DB.records.filter(r=>{
+    const d = new Date(r.createdAt);
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  });
+  const thisMonth = thisMonthRecords.length;
   const pendingDispatch = DB.dispatch.filter(d=>d.status!=='done').length;
+
+  // per-inspector breakdown for the current month, sorted highest first
+  const byInspector = {};
+  thisMonthRecords.forEach(r=>{
+    const name = r.inspectorName || '（未記名）';
+    byInspector[name] = (byInspector[name]||0) + 1;
+  });
+  const inspectorRows = Object.entries(byInspector).sort((a,b)=>b[1]-a[1]);
+  const maxCount = inspectorRows.length ? inspectorRows[0][1] : 0;
+
   const html = `
   <div class="grid3">
     <div class="panel"><h3>總查定件數</h3><div style="font-size:34px;font-weight:900;font-family:var(--mono);">${total}</div></div>
     <div class="panel"><h3>本月新增</h3><div style="font-size:34px;font-weight:900;font-family:var(--mono);color:var(--blue);">${thisMonth}</div></div>
     <div class="panel"><h3>待處理派工</h3><div style="font-size:34px;font-weight:900;font-family:var(--mono);color:var(--stamp);">${pendingDispatch}</div></div>
+  </div>
+  <div class="panel">
+    <h3>本月各查定師完成件數</h3>
+    ${inspectorRows.length ? `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${inspectorRows.map(([name,count])=>`
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:110px;font-size:13px;font-weight:600;flex-shrink:0;">${name}</div>
+          <div style="flex:1;background:var(--surface-alt);border-radius:3px;overflow:hidden;height:18px;">
+            <div style="width:${maxCount?Math.round(count/maxCount*100):0}%;background:var(--blue);height:100%;"></div>
+          </div>
+          <div style="width:30px;text-align:right;font-family:var(--mono);font-weight:700;">${count}</div>
+        </div>`).join('')}
+    </div>` : '<p style="color:var(--ink-soft);font-size:13px;margin:0;">本月尚無查定紀錄</p>'}
   </div>
   <div class="panel">
     <h3>最近查定紀錄</h3>
@@ -1047,14 +1089,16 @@ function renderBrands(){
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <b class="mono" style="font-size:14px;">${b}</b>
             <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost btn-sm" onclick="renameBrand('${b.replace(/'/g,"\\'")}')">編輯廠牌名稱</button>
               <button class="btn btn-ghost btn-sm" onclick="addModelPrompt('${b.replace(/'/g,"\\'")}')">＋ 新增車型</button>
               <button class="btn btn-danger btn-sm" onclick="deleteBrand('${b.replace(/'/g,"\\'")}')">刪除廠牌</button>
             </div>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">
             ${DB.brands[b].slice().sort((a,c)=>a.localeCompare(c)).map(m=>`
-              <span class="chip on" style="cursor:default;display:flex;align-items:center;gap:6px;">${m}
-                <span style="cursor:pointer;font-weight:900;" onclick="deleteModel('${b.replace(/'/g,"\\'")}','${m.replace(/'/g,"\\'")}')">×</span>
+              <span class="chip on" style="display:flex;align-items:center;gap:6px;">
+                <span style="cursor:pointer;" onclick="renameModel('${b.replace(/'/g,"\\'")}','${m.replace(/'/g,"\\'")}')" title="點擊編輯">${m}</span>
+                <span style="cursor:pointer;font-weight:900;" onclick="deleteModel('${b.replace(/'/g,"\\'")}','${m.replace(/'/g,"\\'")}')" title="刪除">×</span>
               </span>`).join('') || '<span style="color:var(--ink-soft);font-size:12px;">尚無車型</span>'}
           </div>
         </div>`).join('')}
@@ -1070,6 +1114,16 @@ function addBrandPrompt(){
   if(!DB.brands[key]) DB.brands[key] = [];
   saveDB(); renderBrands(); toast('已新增廠牌 '+key);
 }
+function renameBrand(oldName){
+  const name = prompt('修改廠牌名稱', oldName);
+  if(!name) return;
+  const newKey = name.trim().toUpperCase();
+  if(!newKey || newKey===oldName) return;
+  if(DB.brands[newKey]){ toast('已存在同名廠牌'); return; }
+  DB.brands[newKey] = DB.brands[oldName];
+  delete DB.brands[oldName];
+  saveDB(); renderBrands(); toast('已更新廠牌名稱');
+}
 function addModelPrompt(brand){
   const name = prompt('請輸入 '+brand+' 的新車型名稱');
   if(!name) return;
@@ -1077,6 +1131,16 @@ function addModelPrompt(brand){
   if(!key) return;
   if(!DB.brands[brand].includes(key)) DB.brands[brand].push(key);
   saveDB(); renderBrands(); toast('已新增車型 '+key);
+}
+function renameModel(brand, oldModel){
+  const name = prompt('修改車型名稱', oldModel);
+  if(!name) return;
+  const newKey = name.trim().toUpperCase();
+  if(!newKey || newKey===oldModel) return;
+  if(DB.brands[brand].includes(newKey)){ toast('已存在同名車型'); return; }
+  const idx = DB.brands[brand].indexOf(oldModel);
+  if(idx>=0) DB.brands[brand][idx] = newKey;
+  saveDB(); renderBrands(); toast('已更新車型名稱');
 }
 function deleteBrand(brand){
   if(!confirm('確定刪除廠牌「'+brand+'」及其所有車型？')) return;
@@ -1238,7 +1302,10 @@ function renderEqSettings(){
       </td>
       <td data-label="項目名稱">${eq.label}</td>
       <td data-label="填寫方式">${eq.select? '<span class="badge badge-active">下拉選單（'+eq.select.join('／')+'）</span>' : (eq.qty? '<span class="badge badge-active">可填數量</span>' : '<span class="badge badge-off">單純勾選</span>')}</td>
-      <td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeEquipmentItem(${i})">刪除</button></td>
+      <td data-label="操作">
+        <button class="btn btn-ghost btn-sm" onclick="editEquipmentItem(${i})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="removeEquipmentItem(${i})">刪除</button>
+      </td>
     </tr>`).join('') || '<tr><td colspan="4" style="color:var(--ink-soft);">尚無項目</td></tr>';
 }
 function moveEquipmentItem(i, dir){
@@ -1262,6 +1329,26 @@ function addEquipmentItem(){
   }
   saveDB(); renderEqSettings(); toast('已新增配備項目');
 }
+function editEquipmentItem(i){
+  const t = currentSettingsTemplate();
+  const eq = t.equipment[i];
+  const newLabel = prompt('修改配備項目名稱', eq.label);
+  if(!newLabel) return;
+  eq.label = newLabel.trim();
+  const mode = confirm('是否需要下拉選單／填寫數量？（確定＝需要／取消＝單純勾選）\n（目前：'+(eq.select?'下拉選單':(eq.qty?'可填數量':'單純勾選'))+'）');
+  if(mode){
+    const optionsRaw = prompt('若需要下拉選單，請輸入選項並用逗號分隔；若只是填寫數量，留空即可', eq.select ? eq.select.join(',') : '');
+    delete eq.select; delete eq.qty;
+    if(optionsRaw && optionsRaw.trim()){
+      eq.select = optionsRaw.split(',').map(s=>s.trim()).filter(Boolean);
+    }else{
+      eq.qty = true;
+    }
+  }else{
+    delete eq.select; delete eq.qty;
+  }
+  saveDB(); renderEqSettings(); toast('已更新配備項目');
+}
 function removeEquipmentItem(i){
   if(!confirm('確定刪除此配備項目？')) return;
   currentSettingsTemplate().equipment.splice(i,1); saveDB(); renderEqSettings();
@@ -1276,12 +1363,22 @@ function renderFcSettings(){
         <button class="btn btn-ghost btn-sm" ${i===t.funcChecks.length-1?'disabled':''} onclick="moveFuncCheckItem(${i},1)">↓</button>
       </td>
       <td data-label="項目名稱">${label}</td>
-      <td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeFuncCheckItem(${i})">刪除</button></td>
+      <td data-label="操作">
+        <button class="btn btn-ghost btn-sm" onclick="editFuncCheckItem(${i})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="removeFuncCheckItem(${i})">刪除</button>
+      </td>
     </tr>`).join('') || '<tr><td colspan="3" style="color:var(--ink-soft);">尚無項目</td></tr>';
 }
 function moveFuncCheckItem(i, dir){
   moveArrayItem(currentSettingsTemplate().funcChecks, i, i+dir);
   saveDB(); renderFcSettings();
+}
+function editFuncCheckItem(i){
+  const t = currentSettingsTemplate();
+  const newLabel = prompt('修改檢查項目名稱', t.funcChecks[i]);
+  if(!newLabel) return;
+  t.funcChecks[i] = newLabel.trim();
+  saveDB(); renderFcSettings(); toast('已更新檢查項目');
 }
 let settingsCustomTabId = null; // which custom tab is currently being edited
 function renderCustomFieldSettings(){
@@ -1309,7 +1406,10 @@ function renderCustomFieldSettings(){
     <tr>
       <td data-label="欄位名稱">${f.label}</td>
       <td data-label="類型">${f.type==='select' ? '下拉選單（'+(f.options||[]).join('／')+'）' : '文字輸入'}</td>
-      <td data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeCustomField(${i})">刪除</button></td>
+      <td data-label="操作">
+        <button class="btn btn-ghost btn-sm" onclick="editCustomField(${i})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="removeCustomField(${i})">刪除</button>
+      </td>
     </tr>`).join('') || '<tr><td colspan="3" style="color:var(--ink-soft);">此標籤尚無欄位</td></tr>';
 }
 function switchSettingsCustomTab(id){
@@ -1368,6 +1468,25 @@ function removeCustomField(i){
   if(!tab) return;
   tab.fields.splice(i,1); saveDB(); renderCustomFieldSettings();
 }
+function editCustomField(i){
+  const t = currentSettingsTemplate();
+  const tab = t.customTabs.find(x=>x.id===settingsCustomTabId);
+  if(!tab) return;
+  const f = tab.fields[i];
+  const newLabel = prompt('修改自訂欄位名稱', f.label);
+  if(!newLabel) return;
+  f.label = newLabel.trim();
+  const isSelect = confirm('這個欄位要用下拉選單嗎？（確定＝下拉選單／取消＝一般文字輸入）\n（目前：'+(f.type==='select'?'下拉選單':'一般文字輸入')+'）');
+  if(isSelect){
+    const optionsRaw = prompt('請輸入選項，用逗號分隔（例如：是,否）', f.options ? f.options.join(',') : '');
+    const options = (optionsRaw||'').split(',').map(s=>s.trim()).filter(Boolean);
+    if(options.length===0){ toast('未輸入選項，已改為一般文字輸入'); f.type='text'; delete f.options; }
+    else{ f.type='select'; f.options=options; }
+  }else{
+    f.type='text'; delete f.options;
+  }
+  saveDB(); renderCustomFieldSettings(); toast('已更新自訂欄位');
+}
 function removeFuncCheckItem(i){
   if(!confirm('確定刪除此檢查項目？')) return;
   currentSettingsTemplate().funcChecks.splice(i,1); saveDB(); renderFcSettings();
@@ -1375,9 +1494,16 @@ function removeFuncCheckItem(i){
 function renderNoteSettings(){
   const wrap = document.getElementById('noteSettingsWrap');
   wrap.innerHTML = DB.notePresets.map((p,i)=>`
-    <span class="chip on" style="cursor:default;display:flex;align-items:center;gap:6px;">${p}
-      <span style="cursor:pointer;font-weight:900;" onclick="removeNotePresetSetting(${i})">×</span>
+    <span class="chip on" style="display:flex;align-items:center;gap:6px;">
+      <span style="cursor:pointer;" onclick="editNotePresetSetting(${i})" title="點擊編輯">${p}</span>
+      <span style="cursor:pointer;font-weight:900;" onclick="removeNotePresetSetting(${i})" title="刪除">×</span>
     </span>`).join('') || '<span style="color:var(--ink-soft);font-size:12px;">尚無片語</span>';
+}
+function editNotePresetSetting(i){
+  const newVal = prompt('修改片語內容', DB.notePresets[i]);
+  if(!newVal || !newVal.trim()) return;
+  DB.notePresets[i] = newVal.trim();
+  saveDB(); renderNoteSettings(); toast('已更新片語');
 }
 function addNotePresetSetting(){
   const input = document.getElementById('noteSettingsInput');
@@ -1466,6 +1592,19 @@ function renderCloudSettings(){
     </p>`}
   </div>
 
+  <div class="panel">
+    <h3>資料備份與還原</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.8;margin-top:0;">
+      不管目前是雲端還是本機儲存模式，都建議定期匯出備份——尤其是本機儲存模式，瀏覽器資料被清除就無法復原。備份檔包含帳號、廠牌車型、查定表單設定、以及所有查定紀錄（<b>不含照片</b>，照片檔案較大，需另外保存）。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-stamp" onclick="exportBackup()">📥 匯出備份檔</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('backupFileInput').click()">📤 從備份檔還原</button>
+      <input type="file" id="backupFileInput" accept=".json" class="hidden" onchange="importBackup(event)">
+    </div>
+    <div id="backupMsg" style="margin-top:10px;font-size:12.5px;"></div>
+  </div>
+
   ${!USE_CLOUD_STORAGE ? `
   <div class="panel">
     <h3>設定步驟</h3>
@@ -1546,6 +1685,76 @@ function clearFirebaseConfig(){
   localStorage.removeItem(FIREBASE_CONFIG_KEY);
   toast('已清除，將重新整理頁面');
   setTimeout(()=>location.reload(), 600);
+}
+function exportBackup(){
+  const { records, ...meta } = DB;
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    meta,
+    records
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = '查定系統備份_'+dateStr+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('備份檔已下載');
+}
+async function importBackup(event){
+  const file = event.target.files[0];
+  event.target.value = ''; // allow re-selecting the same file later
+  if(!file) return;
+  const msg = document.getElementById('backupMsg');
+  try{
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    if(!backup || !backup.meta || !Array.isArray(backup.records)){
+      msg.textContent = '❌ 檔案格式不正確，不是本系統匯出的備份檔';
+      msg.style.color = 'var(--danger)';
+      return;
+    }
+    const recordCount = backup.records.length;
+    const exportedAt = backup.exportedAt ? new Date(backup.exportedAt).toLocaleString() : '未知時間';
+    if(!confirm('即將還原備份檔（匯出時間：'+exportedAt+'，共 '+recordCount+' 筆查定紀錄）。\n\n這會覆蓋目前的帳號、廠牌車型、查定表單設定，並新增/覆蓋備份中的查定紀錄。確定要繼續嗎？')) return;
+
+    msg.textContent = '還原中，請稍候…'; msg.style.color = 'var(--ink-soft)';
+
+    // restore settings/meta
+    DB = { ...backup.meta, records: DB.records };
+    const metaOk = await saveDB();
+    if(!metaOk){
+      msg.textContent = '❌ 設定資料還原失敗：'+(lastStorageError||'請確認網路連線');
+      msg.style.color = 'var(--danger)';
+      return;
+    }
+
+    // restore records one by one (each has its own storage key)
+    let failCount = 0;
+    for(const rec of backup.records){
+      const ok = await saveRecordToStorage(rec);
+      if(!ok) failCount++;
+    }
+    DB.records = backup.records;
+
+    if(failCount>0){
+      msg.textContent = '⚠️ 還原完成，但有 '+failCount+' 筆查定紀錄寫入失敗（'+(lastStorageError||'')+'），請重新整理頁面後再試一次匯入';
+      msg.style.color = 'var(--stamp)';
+    }else{
+      msg.textContent = '✅ 還原完成，共 '+recordCount+' 筆查定紀錄，即將重新整理頁面…';
+      msg.style.color = 'var(--ok)';
+      setTimeout(()=>location.reload(), 1200);
+    }
+  }catch(e){
+    console.error('import backup failed', e);
+    msg.textContent = '❌ 還原失敗：'+(e.message||String(e));
+    msg.style.color = 'var(--danger)';
+  }
 }
 
 /* ============================================================
@@ -1636,11 +1845,56 @@ function openPwdModal(id){
     </div>`;
   document.body.appendChild(overlay);
 }
-function savePwd(id){
+async function savePwd(id){
   const p = document.getElementById('mNewPass').value;
   if(!p){ toast('請輸入新密碼'); return; }
-  DB.accounts.find(a=>a.id===id).password = p;
-  saveDB(); document.querySelector('.modal-overlay').remove(); toast('密碼已更新');
+  const acc = DB.accounts.find(a=>a.id===id);
+  const old = acc.password;
+  acc.password = p;
+  const ok = await saveDB();
+  if(ok){
+    document.querySelector('.modal-overlay').remove();
+    toast('密碼已更新');
+  }else{
+    acc.password = old; // don't leave local state out of sync with what's actually persisted
+    toast('儲存失敗：'+(lastStorageError||'請確認網路連線')+'，請再試一次', 5000);
+  }
+}
+function openMyPwdModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:360px;">
+      <h3>修改我的密碼</h3>
+      <div class="field"><label>目前密碼</label><input id="myOldPass" type="password"></div>
+      <div class="field"><label>新密碼</label><input id="myNewPass" type="password"></div>
+      <div class="field"><label>再輸入一次新密碼</label><input id="myNewPass2" type="password"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-stamp" onclick="saveMyPwd()">儲存</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+async function saveMyPwd(){
+  const oldPass = document.getElementById('myOldPass').value;
+  const newPass = document.getElementById('myNewPass').value;
+  const newPass2 = document.getElementById('myNewPass2').value;
+  if(currentUser.password !== oldPass){ toast('目前密碼輸入錯誤'); return; }
+  if(!newPass){ toast('請輸入新密碼'); return; }
+  if(newPass !== newPass2){ toast('兩次輸入的新密碼不一致'); return; }
+  const acc = DB.accounts.find(a=>a.id===currentUser.id);
+  const old = acc.password;
+  acc.password = newPass;
+  const ok = await saveDB();
+  if(ok){
+    currentUser.password = newPass;
+    document.querySelector('.modal-overlay').remove();
+    toast('密碼已更新');
+  }else{
+    acc.password = old;
+    toast('儲存失敗：'+(lastStorageError||'請確認網路連線')+'，請再試一次', 5000);
+  }
 }
 
 /* ============================================================
@@ -1742,6 +1996,14 @@ async function renderInspectForm(existingId){
   formRecord = existingId ? JSON.parse(JSON.stringify(DB.records.find(r=>r.id===existingId))) : blankRecord();
   if(!formRecord.templateId) formRecord.templateId = DB.formTemplates[0].id; // old records saved before templates existed
   if(formRecord.tireTotal===undefined) formRecord.tireTotal = 4;
+  // if this "new record" was started from a dispatch row, prefill the plate and remember
+  // the link so saveRecord() can write the resulting record id back onto that dispatch entry
+  editingFromDispatchId = null;
+  if(!existingId && pendingDispatchId){
+    const d = DB.dispatch.find(x=>x.id===pendingDispatchId);
+    if(d){ formRecord.plate = d.plate; editingFromDispatchId = pendingDispatchId; }
+    pendingDispatchId = null; // consume once so it doesn't leak into unrelated new records
+  }
   activeTemplate = getTemplateById(formRecord.templateId);
   formPhotos = existingId ? await getPhotos(existingId) : new Array(65).fill(null);
   if(formPhotos.length < 65) { while(formPhotos.length<65) formPhotos.push(null); }
@@ -1889,7 +2151,7 @@ async function renderInspectForm(existingId){
   <div id="customTabPanes"></div>
 
   <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
-    <button class="btn btn-ghost" onclick="goto('records')">取消</button>
+    <button class="btn btn-ghost" onclick="editingFromDispatchId=null;goto('records')">取消</button>
     <button class="btn btn-blue" onclick="previewPDF()">預覽 PDF 報告</button>
     <button class="btn btn-stamp" onclick="saveRecord()">儲存查定紀錄</button>
   </div>
@@ -2317,6 +2579,11 @@ async function saveRecord(){
   // photos are already persisted per-slot as they were taken (pickPhoto/removePhoto),
   // so there is no bulk photo save here.
   if(ok){
+    if(editingFromDispatchId){
+      const d = DB.dispatch.find(x=>x.id===editingFromDispatchId);
+      if(d){ d.recordId = formRecord.id; d.status = 'done'; await saveDB(); }
+      editingFromDispatchId = null;
+    }
     toast('查定紀錄已儲存');
     goto('records');
   }else{
@@ -2397,7 +2664,7 @@ function renderDispatch(){
       <button class="btn btn-stamp btn-sm" onclick="openDispatchModal()">＋ 新增派工</button>
     </div>
     <table>
-      <thead><tr><th>車牌</th><th>指派給</th><th>狀態</th><th>備註</th><th>日期</th><th>操作</th></tr></thead>
+      <thead><tr><th>車牌</th><th>指派給</th><th>狀態</th><th>查定紀錄</th><th>備註</th><th>日期</th><th>操作</th></tr></thead>
       <tbody id="dispatchBody"></tbody>
     </table>
   `;
@@ -2407,14 +2674,24 @@ function renderDispatchRows(){
   const body = document.getElementById('dispatchBody');
   const statusLabel = {pending:'待處理', progress:'處理中', done:'已完成'};
   const statusClass = {pending:'pill-pending', progress:'pill-progress', done:'pill-done'};
-  body.innerHTML = DB.dispatch.slice().reverse().map(d=>`
+  body.innerHTML = DB.dispatch.slice().reverse().map(d=>{
+    const linkedRecord = d.recordId ? DB.records.find(r=>r.id===d.recordId) : null;
+    const recordCell = linkedRecord
+      ? `已建立　<span class="mono">${linkedRecord.bodyGrade||'-'}</span>／<span class="mono">${linkedRecord.date}</span>`
+      : (d.recordId ? '<span style="color:var(--ink-soft);">原紀錄已被刪除</span>' : '<span style="color:var(--ink-soft);">尚未建立</span>');
+    const actionBtn = linkedRecord
+      ? `<button class="btn btn-blue btn-sm" onclick="goto('inspect_new','${linkedRecord.id}')">查看查定紀錄</button>`
+      : `<button class="btn btn-stamp btn-sm" onclick="startInspectionFromDispatch('${d.id}')">建立查定作業</button>`;
+    return `
     <tr>
       <td class="mono" data-label="車牌">${d.plate}</td>
       <td data-label="指派給">${d.assignedTo}</td>
       <td data-label="狀態"><span class="pill ${statusClass[d.status]}">${statusLabel[d.status]}</span></td>
+      <td data-label="查定紀錄">${recordCell}</td>
       <td data-label="備註">${d.note||''}</td>
       <td data-label="日期">${d.date}</td>
-      <td data-label="操作" style="display:flex;gap:6px;">
+      <td data-label="操作" style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${actionBtn}
         <select onchange="setDispatchStatus('${d.id}', this.value)" class="mono" style="font-size:11px;padding:4px;">
           <option value="pending" ${d.status==='pending'?'selected':''}>待處理</option>
           <option value="progress" ${d.status==='progress'?'selected':''}>處理中</option>
@@ -2422,7 +2699,14 @@ function renderDispatchRows(){
         </select>
         <button class="btn btn-danger btn-sm" onclick="deleteDispatch('${d.id}')">刪除</button>
       </td>
-    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--ink-soft);">尚無派工紀錄</td></tr>';
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="color:var(--ink-soft);">尚無派工紀錄</td></tr>';
+}
+let pendingDispatchId = null; // set right before navigating to a new inspection started from a dispatch row
+let editingFromDispatchId = null; // consumed copy, used by saveRecord() to link the saved record back to its dispatch entry
+function startInspectionFromDispatch(dispatchId){
+  pendingDispatchId = dispatchId;
+  goto('inspect_new');
 }
 function setDispatchStatus(id, status){
   DB.dispatch.find(d=>d.id===id).status = status; saveDB(); renderDispatchRows();
@@ -2454,7 +2738,7 @@ function saveDispatch(){
   if(!plate){ toast('請輸入車牌'); return; }
   DB.dispatch.push({
     id: uid('dp'), plate, assignedTo: document.getElementById('dAssign').value,
-    note: document.getElementById('dNote').value.trim(), status:'pending',
+    note: document.getElementById('dNote').value.trim(), status:'pending', recordId:null,
     date: new Date().toISOString().slice(0,10)
   });
   saveDB(); document.querySelector('.modal-overlay').remove(); renderDispatchRows(); toast('派工已建立');
