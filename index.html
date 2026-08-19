@@ -1682,7 +1682,18 @@ function renderCloudSettings(){
       <li>到 <a href="https://sheets.google.com" target="_blank" rel="noopener">Google 試算表</a> 新增一份空白試算表，取個名字（例如「查定系統資料庫」）</li>
       <li>上方選單「擴充功能」→「Apps Script」，把裡面預設的程式碼全部刪掉，貼上下面這段：</li>
     </ol>
-    <pre style="background:#171B2E;color:#e8e8e8;padding:12px;border-radius:4px;font-size:10.5px;overflow:auto;max-height:280px;">function doPost(e) {
+    <pre style="background:#171B2E;color:#e8e8e8;padding:12px;border-radius:4px;font-size:10.5px;overflow:auto;max-height:280px;">function doGet(e) {
+  return out({ok: true, note: '這個網頁應用程式已在線上運作，請在系統的「雲端同步設定」頁面填入這個網址進行連線，不需要在這裡直接開啟。'});
+}
+function doPost(e) {
+  // If this shows an error at "e.postData.contents", it almost always means the
+  // function was run directly from the Apps Script editor's "執行/Run" button —
+  // e is only provided when a real web request comes in through the deployed
+  // Web App URL. Don't use "執行" to test this; deploy it and let the system connect
+  // to the deployed URL instead. This guard turns that mistake into a clear message.
+  if (!e || !e.postData || !e.postData.contents) {
+    return out({error: '沒有收到請求資料。這個函式必須透過已部署的「網頁應用程式」網址呼叫，不能在編輯器按「執行」直接測試——請改成部署後，在系統的「雲端同步設定」頁面填入網址測試連線。'});
+  }
   var lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -1735,6 +1746,7 @@ function out(obj) {
 }</pre>
     <ol start="3" style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);">
       <li>把程式碼裡 <span class="mono">請改成你自己設定的密語</span> 換成你自己取的一組密語（純粹是簡單防護，避免網址被別人猜到就能亂改資料），下方設定欄位裡的 token 要填一樣的字串</li>
+      <li><b style="color:var(--stamp);">⚠️ 貼上程式碼後不要按編輯器裡的「執行」按鈕測試</b>——那個按鈕是直接呼叫函式，沒有經過真正的網路請求，一定會顯示錯誤（例如卡在 <span class="mono">e.postData</span> 那一行），這是正常的，不代表程式碼有問題。直接跳到下一步部署即可，測試連線請用系統裡的「儲存並連線」按鈕。</li>
       <li>按右上角「部署」→「新增部署作業」，類型選「網頁應用程式」，「具有存取權的使用者」選「任何人」，按部署</li>
       <li>會出現一個「網頁應用程式」網址（<span class="mono">https://script.google.com/.../exec</span> 結尾），複製下來填到下方欄位</li>
     </ol>
