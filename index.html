@@ -589,6 +589,51 @@ async function initFirebase(){
     lastFirebaseError = (e && (e.code ? (e.code+': '+e.message) : e.message)) || String(e);
   }
 }
+// --- Optional real multi-device cloud sync via a Google Sheet ------------------
+// Alternative to Firebase: a tiny Google Apps Script "Web App" turns one Google Sheet
+// into a simple key-value API (get/set/delete/list). The person keeps the Web App URL
+// (and a shared token) in localStorage, same idea as the Firebase config.
+const GSHEETS_CONFIG_KEY = 'vis_gsheets_config';
+let USE_GSHEETS = false;
+let lastGSheetsError = null;
+function getGSheetsConfig(){
+  try{
+    const raw = localStorage.getItem(GSHEETS_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+// Sends the request body as text/plain (not application/json) on purpose — that keeps
+// it a CORS "simple request" so the browser skips the preflight OPTIONS call, which
+// Google Apps Script Web Apps generally don't handle well and would otherwise fail.
+async function gsheetsRequest(action, params){
+  const cfg = getGSheetsConfig();
+  if(!cfg || !cfg.url) throw new Error('尚未設定 Google 試算表連線資訊');
+  const body = Object.assign({action, token: cfg.token||''}, params||{});
+  const res = await withTimeout(
+    fetch(cfg.url, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) }),
+    8000,
+    '連線逾時（8 秒內未回應，請確認網路連線或 Google 試算表 Web App 設定）'
+  );
+  let data;
+  try{ data = await res.json(); }
+  catch(e){ throw new Error('回應格式錯誤，請確認 Web App 網址是否正確、是否已部署為「任何人皆可存取」'); }
+  if(data.error) throw new Error(data.error);
+  return data;
+}
+async function initGSheets(){
+  if(USE_CLOUD_STORAGE || USE_FIREBASE) return; // higher-priority backends win when present
+  const cfg = getGSheetsConfig();
+  if(!cfg || !cfg.url) return;
+  try{
+    await gsheetsRequest('list', {prefix: '__connectivity_check__'});
+    USE_GSHEETS = true;
+    lastGSheetsError = null;
+  }catch(e){
+    console.error('Google Sheets init failed', e);
+    USE_GSHEETS = false;
+    lastGSheetsError = (e && e.message) || String(e);
+  }
+}
 const Storage = {
   async get(key){
     if(USE_CLOUD_STORAGE) return await window.storage.get(key, true);
@@ -596,6 +641,11 @@ const Storage = {
       const doc = await firestoreDb.collection(FIRESTORE_COLLECTION).doc(key).get();
       if(!doc.exists){ throw new Error('key not found: '+key); }
       return {key, value: doc.data().value};
+    }
+    if(USE_GSHEETS){
+      const r = await gsheetsRequest('get', {key});
+      if(r.value===undefined || r.value===null){ throw new Error('key not found: '+key); }
+      return {key, value: r.value};
     }
     const v = localStorage.getItem(key);
     if(v===null){ const e = new Error('key not found: '+key); throw e; }
@@ -607,6 +657,10 @@ const Storage = {
       await firestoreDb.collection(FIRESTORE_COLLECTION).doc(key).set({value, updatedAt: Date.now()});
       return {key, value};
     }
+    if(USE_GSHEETS){
+      await gsheetsRequest('set', {key, value});
+      return {key, value};
+    }
     localStorage.setItem(key, value);
     return {key, value};
   },
@@ -614,6 +668,10 @@ const Storage = {
     if(USE_CLOUD_STORAGE) return await window.storage.delete(key, true);
     if(USE_FIREBASE){
       await firestoreDb.collection(FIRESTORE_COLLECTION).doc(key).delete();
+      return {key, deleted:true};
+    }
+    if(USE_GSHEETS){
+      await gsheetsRequest('delete', {key});
       return {key, deleted:true};
     }
     localStorage.removeItem(key);
@@ -635,6 +693,10 @@ const Storage = {
       snap.forEach(d=>keys.push(d.id));
       return {keys, prefix};
     }
+    if(USE_GSHEETS){
+      const r = await gsheetsRequest('list', {prefix: prefix||''});
+      return {keys: r.keys||[], prefix};
+    }
     const keys = [];
     for(let i=0;i<localStorage.length;i++){
       const k = localStorage.key(i);
@@ -644,7 +706,7 @@ const Storage = {
   }
 };
 function storageAvailable(){
-  return USE_CLOUD_STORAGE || USE_FIREBASE || localStorageAvailable();
+  return USE_CLOUD_STORAGE || USE_FIREBASE || USE_GSHEETS || localStorageAvailable();
 }
 async function withStorageRetry(fn, label){
   if(!storageAvailable()){
@@ -947,7 +1009,7 @@ async function doLogin(){
   buildNav();
   if(isMobileViewport()) document.getElementById('sidebar').classList.add('collapsed');
   document.getElementById('storageWarning').classList.toggle('hidden', !DB._storageUnavailable);
-  document.getElementById('localModeNotice').classList.toggle('hidden', USE_CLOUD_STORAGE || USE_FIREBASE || DB._storageUnavailable);
+  document.getElementById('localModeNotice').classList.toggle('hidden', USE_CLOUD_STORAGE || USE_FIREBASE || USE_GSHEETS || DB._storageUnavailable);
   goto('dashboard');
 }
 function logout(){
@@ -1572,23 +1634,30 @@ function savePdfSettings(){
    ============================================================ */
 function renderCloudSettings(){
   const cfg = getFirebaseConfig() || {};
+  const gcfg = getGSheetsConfig() || {};
   const statusBadge = USE_CLOUD_STORAGE
     ? '<span class="badge badge-active">使用 Claude.ai 內建雲端儲存</span>'
     : USE_FIREBASE
       ? '<span class="badge badge-active">已連線 Firebase 雲端資料庫</span>'
-      : '<span class="badge badge-off">目前僅使用本機儲存（未跨裝置共用）</span>';
+      : USE_GSHEETS
+        ? '<span class="badge badge-active">已連線 Google 試算表</span>'
+        : '<span class="badge badge-off">目前僅使用本機儲存（未跨裝置共用）</span>';
   const startupErrorNotice = (!USE_CLOUD_STORAGE && !USE_FIREBASE && cfg.apiKey && lastFirebaseError)
-    ? `<p style="font-size:12px;color:var(--danger);background:#FBEDEA;border:1px solid var(--stamp);padding:8px 10px;border-radius:4px;margin-top:10px;">已儲存的設定目前連線失敗：<span class="mono">${lastFirebaseError}</span></p>`
+    ? `<p style="font-size:12px;color:var(--danger);background:#FBEDEA;border:1px solid var(--stamp);padding:8px 10px;border-radius:4px;margin-top:10px;">已儲存的 Firebase 設定目前連線失敗：<span class="mono">${lastFirebaseError}</span></p>`
+    : '';
+  const gsheetsStartupErrorNotice = (!USE_CLOUD_STORAGE && !USE_FIREBASE && !USE_GSHEETS && gcfg.url && lastGSheetsError)
+    ? `<p style="font-size:12px;color:var(--danger);background:#FBEDEA;border:1px solid var(--stamp);padding:8px 10px;border-radius:4px;margin-top:10px;">已儲存的 Google 試算表設定目前連線失敗：<span class="mono">${lastGSheetsError}</span></p>`
     : '';
   document.getElementById('mainContent').innerHTML = `
   <div class="panel">
     <h3>雲端同步狀態</h3>
     <p style="margin:0 0 14px;">${statusBadge}</p>
     ${startupErrorNotice}
+    ${gsheetsStartupErrorNotice}
     ${USE_CLOUD_STORAGE ? `<p style="font-size:12.5px;color:var(--ink-soft);">目前是在 Claude.ai 的檔案預覽環境中執行，已自動使用其內建的雲端儲存，不需要另外設定。</p>` : `
     <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.8;">
       這個系統是一個獨立的 HTML 檔案，本身沒有伺服器，所以沒辦法讓不同電腦、不同人員自動共用資料，除非您接上一個「雲端資料庫」。<br>
-      這裡使用 <b>Google Firebase</b>（有免費額度，一般小型店家用量通常不會超過），設定完成後，所有裝置只要輸入「相同的設定資料」，就會讀寫同一份資料，達到多人共用的效果。
+      下面提供兩種擇一設定：<b>Firebase</b> 或 <b>Google 試算表</b>。設定完成後，所有裝置只要輸入「相同的設定資料」，就會讀寫同一份資料，達到多人共用的效果。
     </p>`}
   </div>
 
@@ -1607,8 +1676,84 @@ function renderCloudSettings(){
 
   ${!USE_CLOUD_STORAGE ? `
   <div class="panel">
-    <h3>設定步驟</h3>
+    <h3>方式 A：Google 試算表</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">用一份 Google 試算表當資料庫——資料存進去後可以直接打開試算表用眼睛看、手動修改，不需要學新工具。</p>
     <ol style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);">
+      <li>到 <a href="https://sheets.google.com" target="_blank" rel="noopener">Google 試算表</a> 新增一份空白試算表，取個名字（例如「查定系統資料庫」）</li>
+      <li>上方選單「擴充功能」→「Apps Script」，把裡面預設的程式碼全部刪掉，貼上下面這段：</li>
+    </ol>
+    <pre style="background:#171B2E;color:#e8e8e8;padding:12px;border-radius:4px;font-size:10.5px;overflow:auto;max-height:280px;">function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var TOKEN = '請改成你自己設定的密語'; // 跟系統裡填的 token 要一致
+    if (body.token !== TOKEN) return out({error: 'unauthorized'});
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('kv') 
+      || SpreadsheetApp.getActiveSpreadsheet().insertSheet('kv');
+    var data = sheet.getDataRange().getValues();
+    var action = body.action;
+
+    if (action === 'get') {
+      for (var i = 0; i < data.length; i++) {
+        if (data[i][0] === body.key) return out({value: data[i][1]});
+      }
+      return out({value: null});
+    }
+    if (action === 'set') {
+      for (var i = 0; i < data.length; i++) {
+        if (data[i][0] === body.key) {
+          sheet.getRange(i + 1, 2).setValue(body.value);
+          return out({ok: true});
+        }
+      }
+      sheet.appendRow([body.key, body.value]);
+      return out({ok: true});
+    }
+    if (action === 'delete') {
+      for (var i = 0; i < data.length; i++) {
+        if (data[i][0] === body.key) { sheet.deleteRow(i + 1); break; }
+      }
+      return out({ok: true});
+    }
+    if (action === 'list') {
+      var keys = [];
+      var prefix = body.prefix || '';
+      for (var i = 0; i < data.length; i++) {
+        if (data[i][0] && String(data[i][0]).indexOf(prefix) === 0) keys.push(data[i][0]);
+      }
+      return out({keys: keys});
+    }
+    return out({error: 'unknown action'});
+  } finally {
+    lock.releaseLock();
+  }
+}
+function out(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}</pre>
+    <ol start="3" style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);">
+      <li>把程式碼裡 <span class="mono">請改成你自己設定的密語</span> 換成你自己取的一組密語（純粹是簡單防護，避免網址被別人猜到就能亂改資料），下方設定欄位裡的 token 要填一樣的字串</li>
+      <li>按右上角「部署」→「新增部署作業」，類型選「網頁應用程式」，「具有存取權的使用者」選「任何人」，按部署</li>
+      <li>會出現一個「網頁應用程式」網址（<span class="mono">https://script.google.com/.../exec</span> 結尾），複製下來填到下方欄位</li>
+    </ol>
+    <div class="grid3">
+      <div class="field"><label>Web App 網址</label><input id="gs_url" placeholder="https://script.google.com/macros/s/…/exec" value="${gcfg.url||''}"></div>
+      <div class="field"><label>Token（密語，需與程式碼內相同）</label><input id="gs_token" value="${gcfg.token||''}"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-stamp" onclick="saveGSheetsConfigAndReload()">儲存並連線</button>
+      ${gcfg.url ? `<button class="btn btn-danger" onclick="clearGSheetsConfig()">清除設定（改回本機儲存）</button>` : ''}
+    </div>
+    <div id="gsheetsSettingsMsg" style="margin-top:10px;font-size:12.5px;"></div>
+  </div>
+
+  <div class="panel">
+    <h3>方式 B：Firebase</h3>
+    <details>
+    <summary style="cursor:pointer;font-size:12.5px;color:var(--ink-soft);">展開 Firebase 設定步驟（如果不想用 Google 試算表）</summary>
+    <ol style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);margin-top:12px;">
       <li>前往 <a href="https://console.firebase.google.com" target="_blank" rel="noopener">Firebase 主控台</a>，登入 Google 帳號並「新增專案」</li>
       <li>建立完成後，左側選單點「Firestore Database」→「建立資料庫」，模式選「測試模式」（之後可再收緊權限）<br>
         <b style="color:var(--stamp);">⚠️ 左側選單容易跟「Realtime Database」搞混，請確認點的是「Firestore Database」，不是「Realtime Database」——如果連線設定裡出現 <span class="mono">databaseURL</span> 這個欄位，通常就代表建立到 Realtime Database 去了，本系統用的是 Firestore，兩者不是同一個服務。</b>
@@ -1626,11 +1771,7 @@ service cloud.firestore {
     }
   }
 }</pre>
-  </div>
-
-  <div class="panel">
-    <h3>填入 Firebase 設定</h3>
-    <div class="grid3">
+    <div class="grid3" style="margin-top:12px;">
       <div class="field"><label>apiKey</label><input id="fb_apiKey" value="${cfg.apiKey||''}"></div>
       <div class="field"><label>authDomain</label><input id="fb_authDomain" value="${cfg.authDomain||''}"></div>
       <div class="field"><label>projectId</label><input id="fb_projectId" value="${cfg.projectId||''}"></div>
@@ -1643,8 +1784,36 @@ service cloud.firestore {
       ${cfg.apiKey ? `<button class="btn btn-danger" onclick="clearFirebaseConfig()">清除設定（改回本機儲存）</button>` : ''}
     </div>
     <div id="cloudSettingsMsg" style="margin-top:10px;font-size:12.5px;"></div>
+    </details>
   </div>` : ''}
   `;
+}
+async function saveGSheetsConfigAndReload(){
+  const url = document.getElementById('gs_url').value.trim();
+  const token = document.getElementById('gs_token').value.trim();
+  if(!url){ toast('請填入 Web App 網址'); return; }
+  const msg = document.getElementById('gsheetsSettingsMsg');
+  msg.textContent = '連線測試中…'; msg.style.color = 'var(--ink-soft)';
+  localStorage.setItem(GSHEETS_CONFIG_KEY, JSON.stringify({url, token}));
+  USE_GSHEETS = false;
+  await initGSheets();
+  if(USE_GSHEETS){
+    msg.innerHTML = '✅ 連線成功！正在重新載入資料…';
+    msg.style.color = 'var(--ok)';
+    await loadDB();
+    toast('已連線 Google 試算表');
+    setTimeout(()=>location.reload(), 800);
+  }else{
+    const err = lastGSheetsError || '未知錯誤';
+    msg.innerHTML = '❌ 連線失敗：<span class="mono">'+err+'</span><br><span style="color:var(--ink-soft);">請確認：Web App 網址是否正確、部署時是否選「任何人」皆可存取、token 是否跟 Apps Script 程式碼裡的一致。';
+    msg.style.color = 'var(--danger)';
+  }
+}
+function clearGSheetsConfig(){
+  if(!confirm('確定要清除 Google 試算表設定，改回只在這個瀏覽器儲存資料嗎？')) return;
+  localStorage.removeItem(GSHEETS_CONFIG_KEY);
+  toast('已清除，將重新整理頁面');
+  setTimeout(()=>location.reload(), 600);
 }
 async function saveFirebaseConfigAndReload(){
   const cfg = {
@@ -3183,6 +3352,7 @@ function showPdfReadyModal(dataUri, filename){
   }, 9000);
 
   await initFirebase();
+  await initGSheets();
   await loadDB();
   clearTimeout(startupTimeout);
   enableLoginButton();
