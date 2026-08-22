@@ -634,6 +634,94 @@ async function initGSheets(){
     lastGSheetsError = (e && e.message) || String(e);
   }
 }
+
+// --- Optional real multi-device cloud sync via JSONBin.io -----------------------
+// The simplest of the three cloud options: no code to write, no deployment step —
+// just a free account and one API key. JSONBin stores one JSON document per "bin";
+// since our Storage interface needs many independent keys (settings + one per record
+// + one per photo), we keep ONE bin holding a single JSON object that maps
+// key -> value, and read/modify/write that whole object for each operation. A short
+// local cache avoids re-fetching the whole bin on every single read during a normal
+// page load (which does many Storage.get calls in a row), while writes always fetch
+// a fresh copy first to keep the "last write wins" race window as small as practical.
+const JSONBIN_CONFIG_KEY = 'vis_jsonbin_config';
+const JSONBIN_API = 'https://api.jsonbin.io/v3';
+let USE_JSONBIN = false;
+let lastJSONBinError = null;
+let jsonbinCache = null;
+let jsonbinCacheAt = 0;
+function getJSONBinConfig(){
+  try{
+    const raw = localStorage.getItem(JSONBIN_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+async function jsonbinFetchLatest(){
+  const cfg = getJSONBinConfig();
+  if(!cfg || !cfg.apiKey || !cfg.binId) throw new Error('尚未設定 JSONBin 連線資訊');
+  const res = await withTimeout(
+    fetch(JSONBIN_API+'/b/'+cfg.binId+'/latest', { headers: {'X-Master-Key': cfg.apiKey} }),
+    8000,
+    '連線逾時（8 秒內未回應，請確認網路連線）'
+  );
+  if(!res.ok) throw new Error('HTTP '+res.status+'（請確認 API Key 是否正確）');
+  const data = await res.json();
+  jsonbinCache = data.record || {};
+  jsonbinCacheAt = Date.now();
+  return jsonbinCache;
+}
+async function jsonbinPutAll(obj){
+  const cfg = getJSONBinConfig();
+  if(!cfg || !cfg.apiKey || !cfg.binId) throw new Error('尚未設定 JSONBin 連線資訊');
+  const res = await withTimeout(
+    fetch(JSONBIN_API+'/b/'+cfg.binId, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json', 'X-Master-Key': cfg.apiKey},
+      body: JSON.stringify(obj)
+    }),
+    8000,
+    '連線逾時（8 秒內未回應，請確認網路連線）'
+  );
+  if(!res.ok) throw new Error('HTTP '+res.status+'（請確認 API Key 是否正確）');
+  jsonbinCache = obj;
+  jsonbinCacheAt = Date.now();
+}
+async function jsonbinEnsureCache(maxAgeMs){
+  if(jsonbinCache && (Date.now()-jsonbinCacheAt) < (maxAgeMs||3000)) return jsonbinCache;
+  return await jsonbinFetchLatest();
+}
+async function initJSONBin(){
+  if(USE_CLOUD_STORAGE || USE_FIREBASE || USE_GSHEETS) return; // higher-priority backends win when present
+  const cfg = getJSONBinConfig();
+  if(!cfg || !cfg.apiKey) return;
+  try{
+    if(!cfg.binId){
+      // first-time setup: create the one bin this app will use, so the person never
+      // has to handle a bin ID themselves.
+      const res = await withTimeout(
+        fetch(JSONBIN_API+'/b', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Name': '查定系統資料'},
+          body: JSON.stringify({})
+        }),
+        8000,
+        '建立資料儲存空間逾時，請確認網路連線與 API Key'
+      );
+      if(!res.ok) throw new Error('HTTP '+res.status+'（請確認 API Key 是否正確）');
+      const created = await res.json();
+      cfg.binId = created.metadata && created.metadata.id;
+      if(!cfg.binId) throw new Error('建立資料儲存空間失敗（未取得 bin id）');
+      localStorage.setItem(JSONBIN_CONFIG_KEY, JSON.stringify(cfg));
+    }
+    await jsonbinFetchLatest();
+    USE_JSONBIN = true;
+    lastJSONBinError = null;
+  }catch(e){
+    console.error('JSONBin init failed', e);
+    USE_JSONBIN = false;
+    lastJSONBinError = (e && e.message) || String(e);
+  }
+}
 const Storage = {
   async get(key){
     if(USE_CLOUD_STORAGE) return await window.storage.get(key, true);
@@ -646,6 +734,11 @@ const Storage = {
       const r = await gsheetsRequest('get', {key});
       if(r.value===undefined || r.value===null){ throw new Error('key not found: '+key); }
       return {key, value: r.value};
+    }
+    if(USE_JSONBIN){
+      const cache = await jsonbinEnsureCache();
+      if(!cache.hasOwnProperty(key)){ throw new Error('key not found: '+key); }
+      return {key, value: cache[key]};
     }
     const v = localStorage.getItem(key);
     if(v===null){ const e = new Error('key not found: '+key); throw e; }
@@ -661,6 +754,12 @@ const Storage = {
       await gsheetsRequest('set', {key, value});
       return {key, value};
     }
+    if(USE_JSONBIN){
+      const cache = await jsonbinFetchLatest(); // fresh copy right before writing, to shrink the race window
+      cache[key] = value;
+      await jsonbinPutAll(cache);
+      return {key, value};
+    }
     localStorage.setItem(key, value);
     return {key, value};
   },
@@ -672,6 +771,12 @@ const Storage = {
     }
     if(USE_GSHEETS){
       await gsheetsRequest('delete', {key});
+      return {key, deleted:true};
+    }
+    if(USE_JSONBIN){
+      const cache = await jsonbinFetchLatest();
+      delete cache[key];
+      await jsonbinPutAll(cache);
       return {key, deleted:true};
     }
     localStorage.removeItem(key);
@@ -697,6 +802,11 @@ const Storage = {
       const r = await gsheetsRequest('list', {prefix: prefix||''});
       return {keys: r.keys||[], prefix};
     }
+    if(USE_JSONBIN){
+      const cache = await jsonbinEnsureCache();
+      const keys = Object.keys(cache).filter(k=>!prefix || k.startsWith(prefix));
+      return {keys, prefix};
+    }
     const keys = [];
     for(let i=0;i<localStorage.length;i++){
       const k = localStorage.key(i);
@@ -706,7 +816,7 @@ const Storage = {
   }
 };
 function storageAvailable(){
-  return USE_CLOUD_STORAGE || USE_FIREBASE || USE_GSHEETS || localStorageAvailable();
+  return USE_CLOUD_STORAGE || USE_FIREBASE || USE_GSHEETS || USE_JSONBIN || localStorageAvailable();
 }
 async function withStorageRetry(fn, label){
   if(!storageAvailable()){
@@ -1009,7 +1119,7 @@ async function doLogin(){
   buildNav();
   if(isMobileViewport()) document.getElementById('sidebar').classList.add('collapsed');
   document.getElementById('storageWarning').classList.toggle('hidden', !DB._storageUnavailable);
-  document.getElementById('localModeNotice').classList.toggle('hidden', USE_CLOUD_STORAGE || USE_FIREBASE || USE_GSHEETS || DB._storageUnavailable);
+  document.getElementById('localModeNotice').classList.toggle('hidden', USE_CLOUD_STORAGE || USE_FIREBASE || USE_GSHEETS || USE_JSONBIN || DB._storageUnavailable);
   goto('dashboard');
 }
 function logout(){
@@ -1635,18 +1745,24 @@ function savePdfSettings(){
 function renderCloudSettings(){
   const cfg = getFirebaseConfig() || {};
   const gcfg = getGSheetsConfig() || {};
+  const jcfg = getJSONBinConfig() || {};
   const statusBadge = USE_CLOUD_STORAGE
     ? '<span class="badge badge-active">使用 Claude.ai 內建雲端儲存</span>'
     : USE_FIREBASE
       ? '<span class="badge badge-active">已連線 Firebase 雲端資料庫</span>'
       : USE_GSHEETS
         ? '<span class="badge badge-active">已連線 Google 試算表</span>'
-        : '<span class="badge badge-off">目前僅使用本機儲存（未跨裝置共用）</span>';
+        : USE_JSONBIN
+          ? '<span class="badge badge-active">已連線 JSONBin</span>'
+          : '<span class="badge badge-off">目前僅使用本機儲存（未跨裝置共用）</span>';
   const startupErrorNotice = (!USE_CLOUD_STORAGE && !USE_FIREBASE && cfg.apiKey && lastFirebaseError)
     ? `<p style="font-size:12px;color:var(--danger);background:#FBEDEA;border:1px solid var(--stamp);padding:8px 10px;border-radius:4px;margin-top:10px;">已儲存的 Firebase 設定目前連線失敗：<span class="mono">${lastFirebaseError}</span></p>`
     : '';
   const gsheetsStartupErrorNotice = (!USE_CLOUD_STORAGE && !USE_FIREBASE && !USE_GSHEETS && gcfg.url && lastGSheetsError)
     ? `<p style="font-size:12px;color:var(--danger);background:#FBEDEA;border:1px solid var(--stamp);padding:8px 10px;border-radius:4px;margin-top:10px;">已儲存的 Google 試算表設定目前連線失敗：<span class="mono">${lastGSheetsError}</span></p>`
+    : '';
+  const jsonbinStartupErrorNotice = (!USE_CLOUD_STORAGE && !USE_FIREBASE && !USE_GSHEETS && !USE_JSONBIN && jcfg.apiKey && lastJSONBinError)
+    ? `<p style="font-size:12px;color:var(--danger);background:#FBEDEA;border:1px solid var(--stamp);padding:8px 10px;border-radius:4px;margin-top:10px;">已儲存的 JSONBin 設定目前連線失敗：<span class="mono">${lastJSONBinError}</span></p>`
     : '';
   document.getElementById('mainContent').innerHTML = `
   <div class="panel">
@@ -1654,10 +1770,11 @@ function renderCloudSettings(){
     <p style="margin:0 0 14px;">${statusBadge}</p>
     ${startupErrorNotice}
     ${gsheetsStartupErrorNotice}
+    ${jsonbinStartupErrorNotice}
     ${USE_CLOUD_STORAGE ? `<p style="font-size:12.5px;color:var(--ink-soft);">目前是在 Claude.ai 的檔案預覽環境中執行，已自動使用其內建的雲端儲存，不需要另外設定。</p>` : `
     <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.8;">
       這個系統是一個獨立的 HTML 檔案，本身沒有伺服器，所以沒辦法讓不同電腦、不同人員自動共用資料，除非您接上一個「雲端資料庫」。<br>
-      下面提供兩種擇一設定：<b>Firebase</b> 或 <b>Google 試算表</b>。設定完成後，所有裝置只要輸入「相同的設定資料」，就會讀寫同一份資料，達到多人共用的效果。
+      下面提供三種擇一設定：<b>JSONBin</b>（最簡單，不用寫程式、不用部署，適合先從這個開始）、<b>Google 試算表</b>、<b>Firebase</b>。設定完成後，所有裝置只要輸入「相同的設定資料」，就會讀寫同一份資料，達到多人共用的效果。
     </p>`}
   </div>
 
@@ -1676,7 +1793,23 @@ function renderCloudSettings(){
 
   ${!USE_CLOUD_STORAGE ? `
   <div class="panel">
-    <h3>方式 A：Google 試算表</h3>
+    <h3>方式 A：JSONBin（最簡單）</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">不用寫程式、不用部署，申請一組金鑰貼上就好。缺點：免費額度偏小，比較適合放文字資料，之後照片量大的話可能需要升級或改用其他方式。</p>
+    <ol style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);">
+      <li>到 <a href="https://jsonbin.io" target="_blank" rel="noopener">jsonbin.io</a> 免費註冊一個帳號（用 Email 或 Google 帳號都可以）</li>
+      <li>登入後，左側選單找「API Keys」，會看到一組「X-Master-Key」，點旁邊複製</li>
+      <li>把複製到的金鑰貼到下方欄位，按「儲存並連線」——系統會自動幫您建立好需要的資料儲存空間，不需要自己另外設定</li>
+    </ol>
+    <div class="field"><label>X-Master-Key</label><input id="jb_apiKey" placeholder="貼上您的 API Key" value="${jcfg.apiKey||''}"></div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-stamp" onclick="saveJSONBinConfigAndReload()">儲存並連線</button>
+      ${jcfg.apiKey ? `<button class="btn btn-danger" onclick="clearJSONBinConfig()">清除設定（改回本機儲存）</button>` : ''}
+    </div>
+    <div id="jsonbinSettingsMsg" style="margin-top:10px;font-size:12.5px;"></div>
+  </div>
+
+  <div class="panel">
+    <h3>方式 B：Google 試算表</h3>
     <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">用一份 Google 試算表當資料庫——資料存進去後可以直接打開試算表用眼睛看、手動修改，不需要學新工具。</p>
     <ol style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);">
       <li>到 <a href="https://sheets.google.com" target="_blank" rel="noopener">Google 試算表</a> 新增一份空白試算表，取個名字（例如「查定系統資料庫」）</li>
@@ -1762,7 +1895,7 @@ function out(obj) {
   </div>
 
   <div class="panel">
-    <h3>方式 B：Firebase</h3>
+    <h3>方式 C：Firebase</h3>
     <details>
     <summary style="cursor:pointer;font-size:12.5px;color:var(--ink-soft);">展開 Firebase 設定步驟（如果不想用 Google 試算表）</summary>
     <ol style="font-size:12.5px;line-height:2;padding-left:20px;color:var(--ink);margin-top:12px;">
@@ -1817,13 +1950,58 @@ async function saveGSheetsConfigAndReload(){
     setTimeout(()=>location.reload(), 800);
   }else{
     const err = lastGSheetsError || '未知錯誤';
-    msg.innerHTML = '❌ 連線失敗：<span class="mono">'+err+'</span><br><span style="color:var(--ink-soft);">請確認：Web App 網址是否正確、部署時是否選「任何人」皆可存取、token 是否跟 Apps Script 程式碼裡的一致。';
+    let hint = '請確認：Web App 網址是否正確、token 是否跟 Apps Script 程式碼裡的一致。';
+    if(/Failed to fetch|NetworkError|TypeError/i.test(err)){
+      hint = `這個錯誤代表瀏覽器連請求都送不出去（通常還沒送到 Google 就被擋下來），最常見的兩個原因：<br>
+        ① 部署時「具有存取權的使用者」沒有選「任何人」（選到「僅限本人」或「需要 Google 帳戶」都會擋掉）<br>
+        ② 改完程式碼後，只有存檔、但沒有重新部署——編輯程式碼不會自動更新已部署的網址，要到「部署」→「管理部署作業」→選現有部署旁的鉛筆圖示→版本選「新版本」→部署，才會生效<br>
+        建議先點下面「在新分頁測試網址」，如果看到 Google 要求登入的畫面，就是①；如果一片空白或顯示錯誤網頁，通常是網址複製不完整或還沒部署。`;
+    }else if(/unauthorized/i.test(err)){
+      hint = '→ token 不吻合。請確認 Apps Script 程式碼裡 TOKEN 變數的值，跟這頁填的 token 欄位完全一樣（包含大小寫、有無多餘空格）。';
+    }
+    msg.innerHTML = '❌ 連線失敗：<span class="mono">'+err+'</span><br><span style="color:var(--ink-soft);">'+hint+'</span><br><button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="window.open(document.getElementById(\'gs_url\').value.trim(),\'_blank\')">在新分頁測試網址</button>';
     msg.style.color = 'var(--danger)';
   }
 }
 function clearGSheetsConfig(){
   if(!confirm('確定要清除 Google 試算表設定，改回只在這個瀏覽器儲存資料嗎？')) return;
   localStorage.removeItem(GSHEETS_CONFIG_KEY);
+  toast('已清除，將重新整理頁面');
+  setTimeout(()=>location.reload(), 600);
+}
+async function saveJSONBinConfigAndReload(){
+  const apiKey = document.getElementById('jb_apiKey').value.trim();
+  if(!apiKey){ toast('請填入 API Key'); return; }
+  const msg = document.getElementById('jsonbinSettingsMsg');
+  msg.textContent = '連線測試中，首次連線會自動建立資料儲存空間，請稍候…'; msg.style.color = 'var(--ink-soft)';
+  const existing = getJSONBinConfig() || {};
+  // keep an existing binId if the person is just updating the key on a device that
+  // already has one configured; otherwise initJSONBin() will create a new bin.
+  localStorage.setItem(JSONBIN_CONFIG_KEY, JSON.stringify({apiKey, binId: existing.apiKey===apiKey ? existing.binId : null}));
+  USE_JSONBIN = false;
+  await initJSONBin();
+  if(USE_JSONBIN){
+    msg.innerHTML = '✅ 連線成功！正在重新載入資料…';
+    msg.style.color = 'var(--ok)';
+    await loadDB();
+    toast('已連線 JSONBin');
+    setTimeout(()=>location.reload(), 800);
+  }else{
+    const err = lastJSONBinError || '未知錯誤';
+    let hint = '請確認 API Key 是否完整複製、有沒有多餘的空格。';
+    if(/Failed to fetch|NetworkError|TypeError/i.test(err)){
+      hint = '瀏覽器連請求都送不出去，請確認網路連線是否正常，或稍後再試一次。';
+    }else if(/HTTP 401|HTTP 403/i.test(err)){
+      hint = '→ API Key 不正確或已失效，請回 jsonbin.io 的「API Keys」頁面重新複製一次。';
+    }
+    msg.innerHTML = '❌ 連線失敗：<span class="mono">'+err+'</span><br><span style="color:var(--ink-soft);">'+hint+'</span>';
+    msg.style.color = 'var(--danger)';
+  }
+}
+function clearJSONBinConfig(){
+  if(!confirm('確定要清除 JSONBin 設定，改回只在這個瀏覽器儲存資料嗎？')) return;
+  localStorage.removeItem(JSONBIN_CONFIG_KEY);
+  jsonbinCache = null;
   toast('已清除，將重新整理頁面');
   setTimeout(()=>location.reload(), 600);
 }
@@ -3365,6 +3543,7 @@ function showPdfReadyModal(dataUri, filename){
 
   await initFirebase();
   await initGSheets();
+  await initJSONBin();
   await loadDB();
   clearTimeout(startupTimeout);
   enableLoginButton();
