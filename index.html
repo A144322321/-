@@ -650,11 +650,43 @@ let USE_JSONBIN = false;
 let lastJSONBinError = null;
 let jsonbinCache = null;
 let jsonbinCacheAt = 0;
+// Cleans up the two common copy-paste mistakes people make with an API key: selecting
+// the whole "X-Master-Key: xxx" line (label included) instead of just the value, and
+// invisible/smart-quote characters riding along in the clipboard. fetch() headers can
+// only contain ISO-8859-1 bytes, so anything outside printable ASCII breaks with a
+// cryptic "non ISO-8859-1 code point" error otherwise.
+function sanitizeApiKeyString(s){
+  if(!s) return s;
+  let v = String(s).trim();
+  v = v.replace(/^x-master-key\s*:?\s*/i, '');
+  v = v.replace(/[^\x20-\x7E]/g, '');
+  return v.trim();
+}
 function getJSONBinConfig(){
   try{
     const raw = localStorage.getItem(JSONBIN_CONFIG_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if(!raw) return null;
+    const cfg = JSON.parse(raw);
+    // heal any bad value already sitting in storage from before this cleanup existed —
+    // applied on every read, so it fixes itself on the very next page load, not just
+    // the next time the person re-saves the settings form.
+    if(cfg && cfg.apiKey){
+      const cleaned = sanitizeApiKeyString(cfg.apiKey);
+      if(cleaned !== cfg.apiKey){
+        cfg.apiKey = cleaned;
+        try{ localStorage.setItem(JSONBIN_CONFIG_KEY, JSON.stringify(cfg)); }catch(e){}
+      }
+    }
+    return cfg;
   }catch(e){ return null; }
+}
+async function jsonbinErrorDetail(res){
+  try{
+    const body = await res.json();
+    return 'HTTP '+res.status+(body && body.message ? '：'+body.message : '');
+  }catch(e){
+    return 'HTTP '+res.status;
+  }
 }
 async function jsonbinFetchLatest(){
   const cfg = getJSONBinConfig();
@@ -664,7 +696,7 @@ async function jsonbinFetchLatest(){
     8000,
     '連線逾時（8 秒內未回應，請確認網路連線）'
   );
-  if(!res.ok) throw new Error('HTTP '+res.status+'（請確認 API Key 是否正確）');
+  if(!res.ok) throw new Error(await jsonbinErrorDetail(res));
   const data = await res.json();
   jsonbinCache = data.record || {};
   jsonbinCacheAt = Date.now();
@@ -682,7 +714,7 @@ async function jsonbinPutAll(obj){
     8000,
     '連線逾時（8 秒內未回應，請確認網路連線）'
   );
-  if(!res.ok) throw new Error('HTTP '+res.status+'（請確認 API Key 是否正確）');
+  if(!res.ok) throw new Error(await jsonbinErrorDetail(res));
   jsonbinCache = obj;
   jsonbinCacheAt = Date.now();
 }
@@ -701,13 +733,13 @@ async function initJSONBin(){
       const res = await withTimeout(
         fetch(JSONBIN_API+'/b', {
           method: 'POST',
-          headers: {'Content-Type':'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Name': '查定系統資料'},
-          body: JSON.stringify({})
+          headers: {'Content-Type':'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Name': 'vis-inspection-db'},
+          body: JSON.stringify({_initialized: true})
         }),
         8000,
         '建立資料儲存空間逾時，請確認網路連線與 API Key'
       );
-      if(!res.ok) throw new Error('HTTP '+res.status+'（請確認 API Key 是否正確）');
+      if(!res.ok) throw new Error(await jsonbinErrorDetail(res));
       const created = await res.json();
       cfg.binId = created.metadata && created.metadata.id;
       if(!cfg.binId) throw new Error('建立資料儲存空間失敗（未取得 bin id）');
@@ -1970,10 +2002,15 @@ function clearGSheetsConfig(){
   setTimeout(()=>location.reload(), 600);
 }
 async function saveJSONBinConfigAndReload(){
-  const apiKey = document.getElementById('jb_apiKey').value.trim();
+  const original = document.getElementById('jb_apiKey').value.trim();
+  const apiKey = sanitizeApiKeyString(original);
   if(!apiKey){ toast('請填入 API Key'); return; }
   const msg = document.getElementById('jsonbinSettingsMsg');
-  msg.textContent = '連線測試中，首次連線會自動建立資料儲存空間，請稍候…'; msg.style.color = 'var(--ink-soft)';
+  const cleanedNotice = (apiKey !== original)
+    ? '<p style="color:var(--stamp);margin:0 0 8px;">已自動移除多餘的文字／不可見字元，實際使用的金鑰開頭為：<span class="mono">'+apiKey.slice(0,12)+'…</span></p>'
+    : '';
+  msg.innerHTML = cleanedNotice + '連線測試中，首次連線會自動建立資料儲存空間，請稍候…'; msg.style.color = 'var(--ink-soft)';
+  document.getElementById('jb_apiKey').value = apiKey;
   const existing = getJSONBinConfig() || {};
   // keep an existing binId if the person is just updating the key on a device that
   // already has one configured; otherwise initJSONBin() will create a new bin.
@@ -1993,8 +2030,12 @@ async function saveJSONBinConfigAndReload(){
       hint = '瀏覽器連請求都送不出去，請確認網路連線是否正常，或稍後再試一次。';
     }else if(/HTTP 401|HTTP 403/i.test(err)){
       hint = '→ API Key 不正確或已失效，請回 jsonbin.io 的「API Keys」頁面重新複製一次。';
+    }else if(/HTTP 400/i.test(err)){
+      hint = '→ 錯誤訊息裡冒號後面的文字，是 JSONBin 回傳的實際原因，麻煩把完整訊息貼給我，我可以直接對照問題所在。';
+    }else if(/ISO-8859-1|code point/i.test(err)){
+      hint = '→ 金鑰裡還是有不能用的字元，請直接手動刪除欄位內容、只留下 jsonbin.io 頁面上顯示的那一串英數字，不要包含「X-Master-Key」這幾個字或冒號。';
     }
-    msg.innerHTML = '❌ 連線失敗：<span class="mono">'+err+'</span><br><span style="color:var(--ink-soft);">'+hint+'</span>';
+    msg.innerHTML = cleanedNotice + '❌ 連線失敗：<span class="mono">'+err+'</span><br><span style="color:var(--ink-soft);">'+hint+'</span>';
     msg.style.color = 'var(--danger)';
   }
 }
@@ -3398,7 +3439,10 @@ function showReportModal(innerHTML, recordId){
   // NOTE: only ONE scrollable container here (the modal-box itself, via its own
   // overflow:auto in CSS). A second nested overflow:auto around the report content
   // used to create a "scroll trap" on iOS Safari where touch-scrolling the inner
-  // box could lock up and make the modal feel unresponsive/unusable.
+  // box could lock up and make the modal feel unresponsive/unusable. We still keep
+  // that guarantee here — on narrow screens the report is scaled DOWN to fit instead
+  // of relying on a second (horizontal) scroll axis, which on mobile used to show
+  // only a thin unreadable sliver of each row instead of the actual page layout.
   overlay.innerHTML = `
     <div class="modal-box" style="max-width:900px;-webkit-overflow-scrolling:touch;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;position:sticky;top:0;background:#fff;z-index:2;padding-bottom:6px;">
@@ -3408,12 +3452,23 @@ function showReportModal(innerHTML, recordId){
           <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">關閉</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--ink-soft);margin-bottom:6px;">畫面較窄時可左右滑動查看完整報告</div>
-      <div style="overflow-x:auto;border:1px solid var(--line);">
-        <div style="width:794px;">${innerHTML}</div>
+      <div class="rp-preview-viewport" style="border:1px solid var(--line);overflow:hidden;">
+        <div class="rp-preview-inner" style="width:794px;">${innerHTML}</div>
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  requestAnimationFrame(()=>{
+    const viewport = overlay.querySelector('.rp-preview-viewport');
+    const inner = overlay.querySelector('.rp-preview-inner');
+    const availWidth = viewport.clientWidth;
+    if(availWidth > 0 && availWidth < 794){
+      const scale = availWidth / 794;
+      const naturalHeight = inner.scrollHeight;
+      inner.style.transform = 'scale('+scale+')';
+      inner.style.transformOrigin = 'top left';
+      viewport.style.height = Math.ceil(naturalHeight * scale) + 'px';
+    }
+  });
 }
 
 async function downloadPDFForRecord(id){
