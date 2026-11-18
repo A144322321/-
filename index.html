@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>車輛查定管理系統1.0.8</title>
+<title>車輛查定管理系統1.0.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -43,8 +43,8 @@ textarea.inp,label.f>textarea{min-height:96px;resize:vertical}
 .g.c2{grid-template-columns:repeat(2,1fr)}
 .g.eq{grid-template-columns:repeat(2,1fr);gap:8px}
 .g.fn{grid-template-columns:1fr;gap:8px}
-@media(min-width:600px){.g.basic{grid-template-columns:repeat(3,1fr)}.g.eq{grid-template-columns:repeat(4,1fr)}.g.fn{grid-template-columns:repeat(2,1fr)}}
-@media(min-width:1100px){.g.basic{grid-template-columns:repeat(4,1fr)}.g.eq{grid-template-columns:repeat(7,1fr)}.g.fn{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:600px){html:not(.m) .g.basic{grid-template-columns:repeat(3,1fr)}html:not(.m) .g.eq{grid-template-columns:repeat(4,1fr)}html:not(.m) .g.fn{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1100px){html:not(.m) .g.basic{grid-template-columns:repeat(4,1fr)}html:not(.m) .g.eq{grid-template-columns:repeat(7,1fr)}html:not(.m) .g.fn{grid-template-columns:repeat(4,1fr)}}
 .tick{display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--card);cursor:pointer;flex-wrap:wrap}
 .tick input[type=checkbox],.tick input[type=radio]{width:20px;height:20px;accent-color:var(--acc);flex:none}
 .tick.on{border-color:var(--acc);background:var(--accbg)}
@@ -88,7 +88,7 @@ textarea.inp,label.f>textarea{min-height:96px;resize:vertical}
 .login .card{width:min(400px,100%);padding:28px}
 /* stats */
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-@media(min-width:900px){.stats{grid-template-columns:repeat(5,1fr)}}
+@media(min-width:900px){html:not(.m) .stats{grid-template-columns:repeat(5,1fr)}}
 .stat{padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
 .stat b{display:block;font-size:1.9rem;line-height:1.1;color:var(--acc)}
 /* list rows */
@@ -100,14 +100,14 @@ details.flt>summary{cursor:pointer;min-height:44px;display:flex;align-items:cent
 /* wizard */
 .wiz{display:flex;justify-content:space-between;gap:4px;margin-bottom:6px}
 .wiz button{flex:1;min-width:0;height:40px;border-radius:99px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:700;color:var(--mute)}
-.wiz button{padding:0 4px;overflow:hidden;white-space:nowrap;font-size:.85rem}.wn{display:none;margin-left:4px;font-weight:500}@media(min-width:900px){.wn{display:inline}}
+.wiz button{padding:0 4px;overflow:hidden;white-space:nowrap;font-size:.85rem}.wn{display:none;margin-left:4px;font-weight:500}@media(min-width:900px){html:not(.m) .wn{display:inline}}
 .wiz button.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .wiz button.done{color:var(--acc);border-color:var(--acc)}
 .wizlbl{display:flex;justify-content:space-between;align-items:baseline;margin:8px 2px 12px}
 .foot{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
 .foot .btn{flex:1;max-width:220px}
 .foot .sp{flex:1}
-@media(min-width:900px){.foot{left:232px}}
+@media(min-width:900px){html:not(.m) .foot{left:232px}}
 @media(max-width:899px){.foot{bottom:56px;padding-bottom:10px}}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .tabs button{min-height:40px;padding:0 14px;border:1px solid var(--line);background:var(--card);border-radius:var(--r);cursor:pointer}
@@ -127,7 +127,7 @@ details.flt>summary{cursor:pointer;min-height:44px;display:flex;align-items:cent
 .lb button{position:absolute;background:rgba(255,255,255,.15);color:#fff;border:0;width:48px;height:48px;border-radius:50%;font-size:1.3rem;cursor:pointer}
 /* diagram */
 .dgs{display:grid;gap:16px;grid-template-columns:1fr}
-@media(min-width:900px){.dgs{grid-template-columns:1fr 1fr;align-items:start}}
+@media(min-width:900px){html:not(.m) .dgs{grid-template-columns:1fr 1fr;align-items:start}}
 @media(max-width:899px){.dgblock:not(.cur){display:none}}
 .dgs.one{grid-template-columns:1fr!important}.dgs.one .dgwrap{max-width:620px}
 .dgwrap{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:6px;max-width:560px;margin:0 auto}
@@ -142,12 +142,12 @@ details.flt>summary{cursor:pointer;min-height:44px;display:flex;align-items:cent
 .count{font-weight:700;color:var(--acc)}
 /* modal */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90;display:flex;align-items:flex-end;justify-content:center}
-@media(min-width:700px){.ov{align-items:center}}
+@media(min-width:700px){html:not(.m) .ov{align-items:center}}
 .md{background:var(--card);width:min(720px,100%);max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:18px}
-@media(min-width:700px){.md{border-radius:14px}}
+@media(min-width:700px){html:not(.m) .md{border-radius:14px}}
 .toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:99px;z-index:120;max-width:90%;font-size:.92rem}
 .split{display:grid;gap:14px;grid-template-columns:1fr}
-@media(min-width:900px){.split{grid-template-columns:300px 1fr}}
+@media(min-width:900px){html:not(.m) .split{grid-template-columns:300px 1fr}}
 .li{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);margin-bottom:6px;background:var(--card);cursor:pointer;min-height:44px}
 .li.on{border-color:var(--acc);background:var(--accbg)}
 .li.off{opacity:.55}
@@ -173,7 +173,7 @@ details.flt>summary{cursor:pointer;min-height:44px;display:flex;align-items:cent
 .rpt .cks{display:grid;gap:2px 4px;border:1px solid #000;padding:5px 6px}
 .rpt .ck{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:.92em}
 .rpt .cb{display:inline-block;width:11px;height:11px;border:1.3px solid #000;position:relative;flex:none}
-.rpt .cb.on::after{content:"";position:absolute;left:2.5px;top:-1px;width:3.5px;height:7.5px;border:solid #000;border-width:0 2px 2px 0;transform:rotate(40deg)}
+.rpt .cb.on{background:#000}
 .rpt .dgr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .rpt .dgr img{width:100%;height:auto;max-height:100%;object-fit:contain;display:block}
 .rpt .note{border:1px solid #000;padding:6px 8px;min-height:60px}
@@ -185,9 +185,45 @@ details.flt>summary{cursor:pointer;min-height:44px;display:flex;align-items:cent
 .rpt .none{color:#888;font-size:1.1em}
 .rpt .ph2{grid-column:1/-1;font-weight:700;border-bottom:1.5px solid #000;padding-bottom:2px}
 #printRoot{display:none}
+.pstrip{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:4px;-webkit-overflow-scrolling:touch}.pstrip .ph{flex:0 0 84px;height:84px;aspect-ratio:auto}
+.rpt .tt{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 8px}
+.rpt .tt img{height:44px}
+.rpt .tt h1{font-size:2em;letter-spacing:.12em;margin:0;text-align:center}
+.rpt .jg{display:grid;grid-template-columns:repeat(10,1fr);border-top:1.5px solid #000;border-left:1.5px solid #000}
+.rpt .jg>div{border-right:1.5px solid #000;border-bottom:1.5px solid #000;padding:2px 6px;min-height:40px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.rpt .jg small{font-size:.9em;font-weight:700}
+.rpt .jg b{font-size:1.5em;font-weight:700;text-align:center;line-height:1.2;overflow-wrap:anywhere}
+.rpt .jg .big b{font-size:2.4em}
+.rpt .jg .rt b{font-size:1.9em}
+.rpt .jg .vin b{font-size:1.2em}
+.rpt .jg .mi{display:flex;align-items:center;gap:12px;justify-content:center}
+.rpt .cks{border:1.5px solid #000;gap:4px 4px;padding:6px 8px}
+.rpt .ck{font-weight:700;font-size:1em}
+.rpt .fg{display:grid;border-top:1.5px solid #000;border-left:1.5px solid #000}
+.rpt .fg>div{border-right:1.5px solid #000;border-bottom:1.5px solid #000;padding:3px 6px}
+.rpt .bt{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.rpt .bx{border:1.5px solid #000}
+.rpt .nt{text-align:center;font-weight:700;border-bottom:1px solid #000;padding:2px 0}
+.rpt .nl{border-bottom:1px solid #000;padding:3px 6px;font-weight:700}
+.rpt .nbody{padding:5px 8px;min-height:100px}
+.rpt .sg{padding:12px 8px;text-align:center;min-height:44px}
+.rpt .lgd{border-collapse:collapse;width:100%;table-layout:fixed;margin-top:8px}
+.rpt .lgd th,.rpt .lgd td{border:1px solid #000;text-align:center;padding:1px 0}
+.rpt .lgd th{width:26px;font-weight:700;font-size:.9em;word-break:break-all}
+.rpt .lgd .c{font-weight:700}
+.rpt .lgd .d{font-size:.85em;line-height:1.15;word-break:break-all;padding:3px 0;vertical-align:top}
+
 .nb .foot{bottom:0!important;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))!important}.nb .content{padding-bottom:110px}
 .dgblock{min-width:0}
 @media print{body>#app,.toast,.ov{display:none!important}#printRoot{display:block}#printRoot .page{page-break-after:always;margin:0!important}@page{size:A4;margin:0}}
+html.m .shell{grid-template-columns:1fr}html.m .side{position:fixed;inset:0 25% 0 0;z-index:60;height:100%;transform:translateX(-105%);transition:transform .2s;padding-top:calc(14px + env(safe-area-inset-top,0px))}html.m .side.open{transform:none}html.m .menubtn{display:inline-flex}html.m .bnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);z-index:30;padding-bottom:env(safe-area-inset-bottom,0px)}html.m .bnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px;font-size:.78rem;color:var(--ink2);text-decoration:none;cursor:pointer;gap:2px}html.m .bnav a.on{color:var(--acc);font-weight:700}html.m .bnav a span{font-size:1.25rem;line-height:1}html.m .content{padding:12px;padding-bottom:140px}html.m .foot{bottom:56px;padding-bottom:10px}html.m .dgblock:not(.cur){display:none}
+html.m body{background:#c5ccd1}
+html.m #app{max-width:430px;margin:0 auto;background:var(--paper);min-height:100vh;box-shadow:0 0 0 1px var(--line),0 10px 50px rgba(0,0,0,.3)}
+html.m .foot,html.m .bnav{left:50%;right:auto;width:min(430px,100%);transform:translateX(-50%)}
+html.m .side{top:0;bottom:0;right:auto;left:max(0px,calc(50vw - 215px));margin:0;width:min(322px,75vw);transform:none;visibility:hidden}
+html.m .side.open{visibility:visible}
+html.m .ov{align-items:flex-end}
+html.m .md{width:min(430px,100%)!important;border-radius:14px 14px 0 0}
 </style>
 </head>
 <body>
@@ -230,7 +266,10 @@ const dbAll=async s=>MEM?Object.values(mem[s]):rq(os(s).getAll());
 const dbGet=async(s,id)=>MEM?mem[s][id]:rq(os(s).get(id));
 const dbPut=async(s,o)=>{if(MEM){mem[s][o.id]=o;return}return rq(os(s,'readwrite').put(o))};
 const dbDel=async(s,id)=>{if(MEM){delete mem[s][id];return}return rq(os(s,'readwrite').delete(id))};
-const photosOf=async id=>{const a=MEM?Object.values(mem.photos).filter(p=>p.ins===id):await rq(os('photos').index('ins').getAll(id));return a.sort((x,y)=>(x.order||0)-(y.order||0))};
+const photosOf=async id=>{const a=MEM?Object.values(mem.photos).filter(p=>p.ins===id):await rq(os('photos').index('ins').getAll(id));return flatPh(a)};
+const ALLC='照片';
+const legIdx=c=>{const i=(S.cfg?.photoCats||[]).findIndex(x=>x.n===c);return i<0?999:i};
+function flatPh(a){if(a.every(p=>p.cat===ALLC))return a.sort((x,y)=>(x.order||0)-(y.order||0));a.sort((x,y)=>(x.cat===ALLC?999:legIdx(x.cat))-(y.cat===ALLC?999:legIdx(y.cat))||(x.order||0)-(y.order||0));a.forEach((p,i)=>{p.cat=ALLC;p.order=i+1;p._dirty=1});return a}
 async function photoCounts(){const c={};if(MEM){Object.values(mem.photos).forEach(p=>c[p.ins]=(c[p.ins]||0)+1);return c}return new Promise(ok=>{const r=os('photos').index('ins').openKeyCursor();r.onsuccess=()=>{const cu=r.result;if(cu){c[cu.key]=(c[cu.key]||0)+1;cu.continue()}else ok(c)};r.onerror=()=>ok(c)})}
 const S={users:[],inspections:[],brands:[],models:[],templates:[],pdfTpls:[],logs:[],cfg:null,me:null,view:'dash',step:0,sym:'P',syms:['P'],sel:null,online:navigator.onLine,sync:'ok',q:{},cmp:[],fgroup:0,pcat:{},burst:false,menu:false};
 async function loadAll(){for(const s of['users','inspections','brands','models','templates','pdfTpls','logs'])S[s]=await dbAll(s);S.cfg=await dbGet('kv','cfg')}
@@ -348,18 +387,19 @@ function selMark(){if(!S.sel)return null;return(S.te&&S.view==='tplEdit'?S.te.ma
 /* ---------- photos ---------- */
 const JSZIP='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
 async function compress(file,max=1280,q=.72){let im;try{im=await createImageBitmap(file)}catch(e){const url=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(file)});im=await loadImg(url)}const w=im.width,h=im.height;const k=Math.min(1,max/Math.max(w,h));const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}
-const phOf=cat=>S.ph.filter(p=>p.cat===cat).sort((a,b)=>a.order-b.order);
-async function addPhotos(files,cat){if(!S.cur)return;S.cur._d=1;await persistCur();let n=0;toast('處理照片中…',8000);for(const f of files){if(!f.type.startsWith('image/'))continue;try{const data=await compress(f);const o=phOf(cat).reduce((m,p)=>Math.max(m,p.order),0)+1;const p={id:uid(),ins:S.cur.id,cat,order:o,data,ts:Date.now()};await dbPut('photos',p);S.ph.push(p);n++}catch(e){toast('有一張照片無法讀取')}}
+const phOf=()=>S.ph.slice().sort((a,b)=>a.order-b.order);
+async function thumbOf(data,max=220){const im=await loadImg(data);const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}
+async function prepPhotos(id){const a=await photosOf(id);for(const p of a){if(!p.thumb){try{p.thumb=await thumbOf(p.data);p._dirty=1}catch(e){}}}for(const p of a){if(p._dirty){delete p._dirty;await dbPut('photos',p)}}return a}
+async function addPhotos(files){if(!S.cur)return;S.cur._d=1;await persistCur();let n=0;toast('處理照片中…',8000);for(const f of files){if(!f.type.startsWith('image/'))continue;try{const data=await compress(f);const thumb=await thumbOf(data);const o=phOf().reduce((m,p)=>Math.max(m,p.order),0)+1;const p={id:uid(),ins:S.cur.id,cat:ALLC,order:o,data,thumb,ts:Date.now()};await dbPut('photos',p);S.ph.push(p);n++}catch(e){toast('有一張照片無法讀取')}}
  if(n){touch();toast(`已加入 ${n} 張照片`)}renderEdit(true)}
-async function renumber(cats){for(const c of cats){const a=phOf(c);for(let i=0;i<a.length;i++){if(a[i].order!==i+1){a[i].order=i+1;await dbPut('photos',a[i])}}}}
-async function movePhoto(id,dir){const p=S.ph.find(x=>x.id===id);if(!p)return;const a=phOf(p.cat);const i=a.indexOf(p),j=i+dir;if(j<0||j>=a.length)return;[a[i].order,a[j].order]=[a[j].order,a[i].order];await dbPut('photos',a[i]);await dbPut('photos',a[j]);renderEdit(true)}
-async function dropPhoto(id,tid){if(id===tid)return;const p=S.ph.find(x=>x.id===id),t=S.ph.find(x=>x.id===tid);if(!p||!t)return;const oc=p.cat;const list=phOf(t.cat).filter(x=>x.id!==id);const ti=list.indexOf(t);p.cat=t.cat;list.splice(ti,0,p);list.forEach((x,i)=>x.order=i+1);for(const x of list)await dbPut('photos',x);await renumber([oc]);touch();renderEdit(true)}
-async function delPhoto(id){if(!await confirmBox('要刪除這張照片嗎？','刪除'))return;const p=S.ph.find(x=>x.id===id);await dbDel('photos',id);S.ph=S.ph.filter(x=>x.id!==id);if(p)await renumber([p.cat]);touch();renderEdit(true)}
-function thumbs(cat,small){const a=phOf(cat);if(!a.length)return small?'':`<div class="empty">尚無照片</div>`;return`<div class="pgrid">${a.map((p,i)=>`<div class="ph" draggable="true" data-pid="${p.id}"><img src="${p.data}" alt="${esc(cat)} ${i+1}" data-act="lb" data-id="${p.id}"><span class="n">${i+1}</span><div class="ctl"><button data-act="phl" data-id="${p.id}" aria-label="往前">◀</button><button data-act="phd" data-id="${p.id}" aria-label="刪除">✕</button><button data-act="phrt" data-id="${p.id}" aria-label="往後">▶</button></div></div>`).join('')}</div>`}
-function photoBar(step){const cats=S.cfg.photoCats.map(c=>c.n);const dflt={0:'車頭',1:'車內',2:'車頭',3:'底盤',4:'引擎室',5:'其他'}[step];const cur=S.pcat[step]||(cats.includes(dflt)?dflt:cats[0]);S.pcat[step]=cur;
- return`<div class="pbar"><div class="bar"><b>📷 照片</b><select class="inp" style="width:auto;min-height:40px" data-act="pcat" data-step="${step}">${cats.map(c=>`<option ${c===cur?'selected':''}>${esc(c)}</option>`).join('')}</select><span class="sp"></span><button class="btn pri" data-act="cam" data-cat="${esc(cur)}">拍照</button><button class="btn" data-act="gal" data-cat="${esc(cur)}">相簿選取</button></div><label class="tick" style="margin-top:8px;min-height:36px;border:0;background:none;padding:0"><input type="checkbox" data-act="burst" ${S.burst?'checked':''}>連續拍照（拍完自動再開相機）</label>${thumbs(cur,true)}<div class="sm mut" style="margin-top:6px">「${esc(cur)}」共 ${phOf(cur).length} 張</div></div>`}
-function openLb(id){const p=S.ph.find(x=>x.id===id);if(!p)return;const list=phOf(p.cat);S.lb={list,i:list.indexOf(p)};showLb()}
-function showLb(){$('.lb')?.remove();const{list,i}=S.lb;const o=document.createElement('div');o.className='lb';o.innerHTML=`<img src="${list[i].data}" alt=""><button style="left:10px" data-lb="-1" aria-label="上一張">◀</button><button style="right:10px" data-lb="1" aria-label="下一張">▶</button><button style="top:calc(10px + env(safe-area-inset-top,0px));right:10px" data-lb="x" aria-label="關閉">✕</button><span style="position:absolute;bottom:14px;color:#fff">${list[i].cat} ${i+1} / ${list.length}</span>`;let x0=0;o.addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});o.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>50)lbGo(d<0?1:-1)});o.addEventListener('click',e=>{const b=e.target.closest('[data-lb]');if(b){b.dataset.lb==='x'?o.remove():lbGo(Number(b.dataset.lb))}});document.body.appendChild(o)}
+async function renumber(){const a=phOf();for(let i=0;i<a.length;i++){if(a[i].order!==i+1){a[i].order=i+1;await dbPut('photos',a[i])}}}
+async function movePhoto(id,dir){const a=phOf();const i=a.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=a.length)return;[a[i].order,a[j].order]=[a[j].order,a[i].order];await dbPut('photos',a[i]);await dbPut('photos',a[j]);renderEdit(true)}
+async function dropPhoto(id,tid){if(id===tid)return;const a=phOf();const p=a.find(x=>x.id===id),t=a.find(x=>x.id===tid);if(!p||!t)return;const list=a.filter(x=>x.id!==id);list.splice(list.indexOf(t),0,p);list.forEach((x,i)=>x.order=i+1);for(const x of list)await dbPut('photos',x);touch();renderEdit(true)}
+async function delPhoto(id){if(!await confirmBox('要刪除這張照片嗎？','刪除'))return;await dbDel('photos',id);S.ph=S.ph.filter(x=>x.id!==id);await renumber();touch();renderEdit(true)}
+function thumbs(small){const a=phOf();if(!a.length)return small?'':`<div class="empty">尚無照片</div>`;return`<div class="${small?'pstrip':'pgrid'}">${a.map((p,i)=>`<div class="ph" draggable="true" data-pid="${p.id}"><img src="${p.thumb||p.data}" alt="照片 ${i+1}" data-act="lb" data-id="${p.id}"><span class="n">${i+1}</span><div class="ctl"><button data-act="phl" data-id="${p.id}" aria-label="往前">◀</button><button data-act="phd" data-id="${p.id}" aria-label="刪除">✕</button><button data-act="phrt" data-id="${p.id}" aria-label="往後">▶</button></div></div>`).join('')}</div>`}
+function photoBar(step){return`<div class="pbar"><div class="bar"><b>📷 照片</b><span class="mut sm">共 ${S.ph.length} 張</span><span class="sp"></span><button class="btn pri" data-act="cam">拍照</button><button class="btn" data-act="gal">相簿選取</button></div><label class="tick" style="margin-top:8px;min-height:36px;border:0;background:none;padding:0"><input type="checkbox" data-act="burst" ${S.burst?'checked':''}>連續拍照（拍完自動再開相機）</label>${thumbs(true)}</div>`}
+function openLb(id){const p=S.ph.find(x=>x.id===id);if(!p)return;const list=phOf();S.lb={list,i:list.indexOf(p)};showLb()}
+function showLb(){$('.lb')?.remove();const{list,i}=S.lb;const o=document.createElement('div');o.className='lb';o.innerHTML=`<img src="${list[i].data}" alt=""><button style="left:10px" data-lb="-1" aria-label="上一張">◀</button><button style="right:10px" data-lb="1" aria-label="下一張">▶</button><button style="top:calc(10px + env(safe-area-inset-top,0px));right:10px" data-lb="x" aria-label="關閉">✕</button><span style="position:absolute;bottom:14px;color:#fff">照片 ${i+1} / ${list.length}</span>`;let x0=0;o.addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});o.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>50)lbGo(d<0?1:-1)});o.addEventListener('click',e=>{const b=e.target.closest('[data-lb]');if(b){b.dataset.lb==='x'?o.remove():lbGo(Number(b.dataset.lb))}});document.body.appendChild(o)}
 function lbGo(d){const n=S.lb.i+d;if(n<0||n>=S.lb.list.length)return;S.lb.i=n;showLb()}
 document.addEventListener('keydown',e=>{if(!$('.lb'))return;if(e.key==='Escape')$('.lb').remove();if(e.key==='ArrowLeft')lbGo(-1);if(e.key==='ArrowRight')lbGo(1)});
 let dragId=null;
@@ -369,18 +409,19 @@ document.addEventListener('drop',e=>{const p=e.target.closest?.('.ph[data-pid]')
 document.addEventListener('dragend',()=>{dragId=null;$$('.ph.over').forEach(x=>x.classList.remove('over'))});
 const zipBase=i=>`${i.date}_${i.brand}_${i.model}_${i.plate}`.replace(/[\\/:*?"<>|\s]+/g,'_');
 async function zipPhotos(list){if(!can('photoDl'))return toast('沒有下載照片的權限');toast('正在打包照片…',20000);try{await loadScript(JSZIP)}catch(e){return toast('無法載入 ZIP 元件，請確認網路連線')}
- const zip=new JSZip();let total=0;for(const ins of list){const ph=await photosOf(ins.id);const f=list.length>1?zip.folder(zipBase(ins)):zip;const cnt={};for(const p of ph){const n=cnt[p.cat]=(cnt[p.cat]||0)+1;f.file(`${p.cat}_${p2(n)}.jpg`,p.data.split(',')[1],{base64:true});total++}}
+ const zip=new JSZip();let total=0;for(const ins of list){const ph=await photosOf(ins.id);const f=list.length>1?zip.folder(zipBase(ins)):zip;ph.forEach((p,i)=>{f.file(`${p2(i+1)}.jpg`,p.data.split(',')[1],{base64:true});total++})}
  if(!total)return toast('這些查定沒有照片');const blob=await zip.generateAsync({type:'blob'});const name=list.length>1?`${today()}_批次照片_${list.length}台.zip`:zipBase(list[0])+'.zip';if(await saveFile(name,blob)){toast('照片已打包');log('下載照片',name)}}
 
 /* ---------- inspection editor (wizard) ---------- */
 function newInsp(){const t=S.templates.find(t=>t.isDefault)||S.templates[0];const pt=S.pdfTpls.find(t=>t.isDefault&&t.active)||S.pdfTpls.find(t=>t.active)||S.pdfTpls[0];
- return{id:uid(),plate:'',brand:'',model:'',rating:'',interior:'',mfg:'',cc:'',drive:'',gear:'',doors:'',color:'',body:'',fuel:'',mileage:'',mUnit:'km',mGuar:'',vin:'',engNo:'',equip:{},marks:[],func:{},phrases:[],notes:'',tires:0,sheetOv:'',tplId:t.id,mstyle:{ff:t.ff,fw:t.fw,fs:t.fs,color:t.color},pdfId:pt.id,inspectorId:S.me.id,inspectorName:S.me.name,date:today(),created:Date.now(),modified:Date.now(),status:'draft',synced:false,pdfCount:0}}
-async function openEdit(id){if(id){const i=S.inspections.find(x=>x.id===id);if(!i)return;S.cur=i;S.isNew=false}else{S.cur=newInsp();S.isNew=true}S.ph=await photosOf(S.cur.id);S.step=0;S.sel=null;S.fgroup=0;S.pcat={};go('edit')}
+ return{id:uid(),no:'',plate:'',brand:'',model:'',rating:'',interior:'',mfg:'',cc:'',drive:'',gear:'',doors:'',color:'',body:'',fuel:'',mileage:'',mUnit:'km',mGuar:'',vin:'',engNo:'',equip:{},marks:[],func:{},phrases:[],notes:'',tires:0,sheetOv:'',tplId:t.id,mstyle:{ff:t.ff,fw:t.fw,fs:t.fs,color:t.color},pdfId:pt.id,inspectorId:S.me.id,inspectorName:S.me.name,date:today(),created:Date.now(),modified:Date.now(),status:'draft',synced:false,pdfCount:0}}
+async function openEdit(id){if(id){const i=S.inspections.find(x=>x.id===id);if(!i)return;S.cur=i;S.isNew=false}else{S.cur=newInsp();S.isNew=true}S.ph=await prepPhotos(S.cur.id);S.step=0;S.sel=null;S.fgroup=0;S.pcat={};go('edit')}
 const F=(l,f,t='text',x='')=>`<label class="f">${l}<input data-f="${f}" type="${t}" value="${esc(S.cur[f])}" ${x}></label>`;
 const SEL=(l,f,opts,blank=true)=>`<label class="f">${l}<select data-f="${f}">${blank?'<option value=""></option>':''}${(S.cur[f]&&!opts.includes(S.cur[f])?[...opts,S.cur[f]]:opts).map(o=>`<option ${S.cur[f]===o?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`;
 const brandsActive=()=>[...S.brands].filter(b=>b.active||b.name===S.cur.brand).sort((a,b)=>a.order-b.order);
 function step1(){const c=S.cur;const b=S.brands.find(x=>x.name===c.brand);const ms=b?S.models.filter(m=>m.brand===b.id&&m.active):[];
  return`<div class="card"><div class="g basic">
+ ${F('編號','no')}
  ${F('車牌號碼','plate','text','autocapitalize="characters" autocomplete="off" placeholder="ABC-1234"')}
  <label class="f">廠牌<select data-f="brand"><option value=""></option>${brandsActive().map(x=>`<option ${x.name===c.brand?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
  <label class="f">車型<input data-f="model" list="mdl" value="${esc(c.model)}" autocomplete="off"><datalist id="mdl">${ms.map(m=>`<option value="${esc(m.name)}">`).join('')}</datalist></label>
@@ -400,13 +441,12 @@ function stepDg(v){const c=S.cur;const cur=v;return`<div class="bar" style="marg
 function step5(){const c=S.cfg,gs=[...new Set(c.funcs.map(f=>f.g))];const gi=Math.min(S.fgroup,gs.length-1);const g=gs[gi];
  return`<div class="tabs" role="tablist">${gs.map((x,i)=>{const n=c.funcs.filter(f=>f.g===x&&S.cur.func[f.n]).length;return`<button role="tab" class="${i===gi?'on':''}" data-act="fg" data-i="${i}">${esc(x)}${n?` (${n})`:''}</button>`}).join('')}</div><div class="g fn">${c.funcs.filter(f=>f.g===g).map(f=>`<label class="tick ${S.cur.func[f.n]?'on':''}"><input type="checkbox" data-fn="${esc(f.n)}" ${S.cur.func[f.n]?'checked':''}>${esc(f.n)}</label>`).join('')}</div>`}
 function step6(){const c=S.cur;return`<div class="card"><h3 style="margin-bottom:10px">片語（可複選）</h3><div class="chips">${S.cfg.phrases.map((p,i)=>`<button class="chip ${c.phrases.includes(p)?'on':''}" data-act="phr" data-i="${i}" aria-pressed="${c.phrases.includes(p)}">${esc(p)}</button>`).join('')}</div><div class="bar" style="margin-top:14px"><input class="inp" id="newPhr" style="flex:1;min-width:180px" placeholder="自訂片語，例如：左前葉子板烤漆"><button class="btn" data-act="addphr">新增片語</button></div></div><div class="card"><label class="f">其他說明（每行一項）<textarea data-f="notes" placeholder="需要補充的內容">${esc(c.notes)}</textarea></label></div><p class="sm mut">PDF 會將每個片語自動加上句號。</p>`}
-function step7(){return S.cfg.photoCats.map(k=>{const n=phOf(k.n).length;return`<div class="card"><div class="bar"><h3>${esc(k.n)}</h3><span class="pill ${n>=k.slots&&k.slots?'g':n?'':'w'}">${n}${k.slots?' / '+k.slots:''} 張</span><span class="sp"></span><button class="btn s pri" data-act="cam" data-cat="${esc(k.n)}">拍照</button><button class="btn s" data-act="gal" data-cat="${esc(k.n)}">選取</button></div>${thumbs(k.n)}</div>`}).join('')+`<label class="tick" style="margin-top:12px"><input type="checkbox" data-act="burst" ${S.burst?'checked':''}>連續拍照模式</label>`}
-function step8(){const c=S.cur;const sc=symCount(c.marks);const miss=S.cfg.photoCats.filter(k=>k.slots&&!phOf(k.n).length).map(k=>k.n);
- return`<div class="card"><div class="bar"><h2 class="plate">${esc(c.plate||'（未填車牌）')}</h2><span>${esc(c.brand)} ${esc(c.model)}</span><span class="sp"></span><span class="pill ${c.status==='done'?'g':'w'}">${c.status==='done'?'已完成':'草稿'}</span></div><p class="mut sm" style="margin:6px 0 0">車輛評價 ${esc(c.rating||'—')}　內裝評價 ${esc(c.interior||'—')}　里程 ${esc(c.mileage||'—')} ${c.mileage?esc(c.mUnit):''} ${esc(c.mGuar)}</p></div>
+function step7(){const n=S.ph.length;return`<div class="card"><div class="bar"><h3>車輛照片</h3><span class="pill ${n?'':'w'}">${n} 張</span><span class="sp"></span><button class="btn s pri" data-act="cam">拍照</button><button class="btn s" data-act="gal">選取</button></div><p class="sm mut" style="margin:8px 0 0">照片不分類，依順序排列；可拖曳或按 ◀ ▶ 調整順序，PDF 也照這個順序。</p>${thumbs(false)}</div><label class="tick" style="margin-top:12px"><input type="checkbox" data-act="burst" ${S.burst?'checked':''}>連續拍照模式</label>`}
+function step8(){const c=S.cur;const sc=symCount(c.marks); return`<div class="card"><div class="bar"><h2 class="plate">${esc(c.plate||'（未填車牌）')}</h2><span>${esc(c.brand)} ${esc(c.model)}</span><span class="sp"></span><span class="pill ${c.status==='done'?'g':'w'}">${c.status==='done'?'已完成':'草稿'}</span></div><p class="mut sm" style="margin:6px 0 0">車輛評價 ${esc(c.rating||'—')}　內裝評價 ${esc(c.interior||'—')}　里程 ${esc(c.mileage||'—')} ${c.mileage?esc(c.mUnit):''} ${esc(c.mGuar)}</p></div>
  <div class="card g c2"><div><div class="mut sm">板金片數（自動）</div><div class="count" style="font-size:2rem">${sheetAuto(c.marks)} 片</div><div class="sm mut">計入：P、B、S1、S2、G　不計入：[p]、R、b、W、h、XX、X</div></div>
  <div class="g" style="gap:10px"><label class="f">板金片數（留空＝使用自動值）<input data-f="sheetOv" type="number" min="0" value="${esc(c.sheetOv)}" placeholder="${sheetAuto(c.marks)}"></label><label class="f">輪胎更換數（條）<select data-f="tires">${[0,1,2,3,4].map(n=>`<option ${Number(c.tires)===n?'selected':''}>${n}</option>`).join('')}</select></label></div></div>
  <div class="card"><h3 style="margin-bottom:8px">標記統計</h3>${Object.keys(sc).length?`<div class="chips">${SYMS.filter(s=>sc[s]).map(s=>`<span class="pill ${PANEL.includes(s)?'':'g'}" style="font-size:.95rem">${s} × ${sc[s]}</span>`).join('')}</div>`:'<span class="mut">尚未標記</span>'}</div>
- <div class="card"><div class="sm">配備 ${Object.values(c.equip).filter(e=>e.on).length} 項　機能件異常 ${Object.keys(c.func).filter(k=>c.func[k]).length} 項　片語 ${c.phrases.length} 個　照片 ${S.ph.length} 張</div>${miss.length?`<div class="pill w" style="margin-top:8px">尚未拍攝：${miss.map(esc).join('、')}（PDF 會顯示「無照片」）</div>`:''}</div>
+ <div class="card"><div class="sm">配備 ${Object.values(c.equip).filter(e=>e.on).length} 項　機能件異常 ${Object.keys(c.func).filter(k=>c.func[k]).length} 項　片語 ${c.phrases.length} 個　照片 ${S.ph.length} 張</div>${S.ph.length?'':`<div class="pill w" style="margin-top:8px">尚未拍照（PDF 會顯示「無照片」）</div>`}</div>
  <div class="bar"><span class="sp"></span><button class="btn pri" data-act="done">${c.status==='done'?'更新查定':'完成查定'}</button></div>`}
 function step9(){const c=S.cur;return`<div class="card bar"><label class="f" style="flex-direction:row;align-items:center;gap:8px">PDF 模板<select class="inp" style="width:auto" data-act="pdfsel">${S.pdfTpls.filter(t=>t.active||t.id===c.pdfId).map(t=>`<option value="${t.id}" ${t.id===c.pdfId?'selected':''}>${esc(t.name)}</option>`).join('')}</select></label><span class="sp"></span>${can('pdf')?`<button class="btn" data-act="rpPrint">列印</button>`:''}${can('pdfDl')?`<button class="btn pri" data-act="rpPdf">下載 PDF</button>`:''}${can('photoDl')?`<button class="btn" data-act="zipOne">下載全部照片</button>`:''}</div><div class="rptbox" id="rptBox"><div class="rpt" id="rptPrev" style="padding:30px;text-align:center;background:#fff;color:#666">產生預覽中…</div></div>`}
 function editHTML(){const c=S.cur,s=S.step;
@@ -423,32 +463,38 @@ const H2C='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.
 const withDot=p=>/[。.]$/.test(p)?p:p+'。';
 const ptOf=(ins,o)=>o?.pt||S.pdfTpls.find(t=>t.id===ins.pdfId)||S.pdfTpls.find(t=>t.isDefault)||S.pdfTpls[0];
 const fontOf=pt=>`'${pt.font||'Noto Sans TC'}','Noto Sans TC','Microsoft JhengHei',sans-serif`;
+const legendList=()=>S.cfg.legend||SYMS_EXT.map(c=>({c,d:''}));
 async function buildReport(ins,o={}){
  const pt=ptOf(ins,o),cfg=S.cfg,ph=o.photos||await photosOf(ins.id),st=styleOf(ins),tpl=tplOf(ins);
  const mk=v=>(ins.marks||[]).filter(m=>m.view===v);
  const[pe,ps]=await Promise.all([diagramPNG('ext',mk('ext'),st,null),diagramPNG('str',mk('str'),st,null)]);
- const mil=ins.mileage!==''&&ins.mileage!=null?`${Number(ins.mileage).toLocaleString()} ${ins.mUnit||''} ${ins.mGuar||''}`:'';
- const info=[['車牌',ins.plate],['廠牌',ins.brand],['車型',ins.model],['車輛評價',ins.rating],['內裝評價',ins.interior],['出廠年月',(ins.mfg||'').replace('-','/')],['排氣量',ins.cc?ins.cc+' cc':''],['傳動',ins.drive],['排檔模式',ins.gear],['車門數',ins.doors],['車色',ins.color],['車身型式',ins.body],['燃油',ins.fuel],['里程',mil],['車身號碼',ins.vin],['引擎號碼',ins.engNo],['查定日期',fmtD(ins.date)],['查定師',ins.inspectorName]];
- const n=pt.basicCols||3;while(info.length%n)info.push(['','']);
- const ck=(on,t)=>`<div class="ck"><i class="cb ${on?'on':''}"></i>${esc(t)}</div>`;
- const eq=cfg.equipment.map(e=>{const q=ins.equip?.[e.n]||{};const v=q.on&&q.val?(e.n==='KEY'?`(${q.val})支`:`(${q.val})`):'';return ck(q.on,e.n+v)}).join('');
- const fn=cfg.funcs.map(f=>ck(ins.func?.[f.n],f.n)).join('');
+ const fmtKm=ins.mileage!==''&&ins.mileage!=null?`${Number(ins.mileage).toLocaleString()} ${ins.mUnit||'km'}`:'';
+ const ck=(on,t,raw='')=>`<div class="ck"><i class="cb ${on?'on':''}"></i>${esc(t)}${raw}</div>`;
+ const eq=cfg.equipment.map(e=>{const q=ins.equip?.[e.n]||{};const val=q.on&&q.val?' '+esc(q.val)+' ':'&nbsp;&nbsp;&nbsp;&nbsp;';
+  if(e.n==='KEY')return`<div class="ck">KEY(${val})支</div>`;
+  return ck(q.on,e.n,e.x?`(${val})`:'')}).join('');
+ const fcols=pt.funcCols||4;const fcells=cfg.funcs.map(f=>`<div>${ck(ins.func?.[f.n],f.n)}</div>`);while(fcells.length%fcols)fcells.push('<div></div>');
  const notes=((ins.phrases||[]).length?`<div>${ins.phrases.map(p=>esc(withDot(p))).join('')}</div>`:'')+String(ins.notes||'').split('\n').filter(x=>x.trim()).map(x=>`<div>${esc(x)}</div>`).join('');
- const hd=`<div class="hd">${pt.logo?`<img src="${pt.logo}" alt="">`:''}<div style="flex:1"><h1>${esc(pt.title||'車輛點檢表')}</h1></div><div class="co">${esc(pt.company||'')}</div></div>`;
+ const title=(pt.title||'車輛點檢表').replace(/([\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])/g,'$1');
+ const hd=`<div class="tt">${pt.logo?`<img src="${pt.logo}" alt="">`:''}<h1>${esc((pt.company?pt.company+' ':'')+title)}</h1></div>`;
+ const C=(l,v,sp,cls,rs)=>`<div class="${cls||''}" style="grid-column:span ${sp};${rs?`grid-row:span ${rs};`:''}"><small>${l}</small><b>${esc(v||'')}</b></div>`;
+ const mfg=(ins.mfg||'').replace('-','/');
+ const grid=`<div class="jg">${C('編號：',ins.no,2,'big',2)}${C('廠牌：',ins.brand,2)}${C('車型：',ins.model,2)}${C('結構評價：',ins.rating,2,'rt')}${C('內裝評價：',ins.interior,2,'rt')}${C('出廠年月：',mfg,2)}${C('排氣量：',ins.cc?ins.cc+' cc':'',2)}${C('車色：',ins.color,2)}${C('車身型式：',ins.body,2)}${C('車號：',ins.plate,2)}${C('車門數：',ins.doors,2)}${C('排檔模式：',ins.gear,2)}${C('傳動：',ins.drive,2)}${C('燃油種類：',ins.fuel,2)}<div style="grid-column:span 4"><small>儀表里程：</small><div class="mi"><span class="ck"><i class="cb ${ins.mGuar==='保證'?'on':''}"></i>保證</span><span class="ck"><i class="cb ${ins.mGuar==='不保證'?'on':''}"></i>不保證</span><b>${esc(fmtKm)}</b></div></div>${C('車身號碼：',ins.vin,3,'vin')}${C('引擎號碼：',ins.engNo,3,'vin')}</div>`;
+ const lg=legendList().filter(x=>x.c&&x.d);
+ const legend=lg.length?`<table class="lgd"><tr><th rowspan="2">代號</th>${lg.map(x=>`<td class="c">${esc(x.c)}</td>`).join('')}</tr><tr>${lg.map(x=>`<td class="d">${esc(x.d)}</td>`).join('')}</tr></table>`:'';
  // photo pages
  const byCat={};ph.forEach(p=>(byCat[p.cat]=byCat[p.cat]||[]).push(p));const cols=pt.photoCols||3,ph_h=pt.photoH||170,rowH=ph_h+8,CAP=980;
  const pages=[];let cur,y;const np=()=>{cur=[];pages.push(cur);y=0};np();
- for(const c of cfg.photoCats){const arr=(byCat[c.n]||[]).sort((a,b)=>a.order-b.order);const cnt=Math.max(c.slots||0,arr.length,1);const cells=Array.from({length:cnt},(_,i)=>arr[i]||null);
-  if(y+26+rowH>CAP)np();cur.push(`<div class="ph2">${esc(c.n)}</div>`);y+=26;
-  for(let i=0;i<cells.length;i+=cols){if(y+rowH>CAP){np();cur.push(`<div class="ph2">${esc(c.n)}（續）</div>`);y+=26}
-   cells.slice(i,i+cols).forEach((p,j)=>cur.push(`<div class="pc" style="height:${ph_h}px">${p?`<img src="${p.data}" alt=""><i>${esc(c.n)} ${i+j+1}</i>`:`<span class="none">無照片</span>`}</div>`));y+=rowH}}
+ const cells=ph.length?ph:[null];
+ for(let i=0;i<cells.length;i+=cols){if(y+rowH>CAP)np();cells.slice(i,i+cols).forEach((p,j)=>cur.push(`<div class="pc" style="height:${ph_h}px">${p?`<img src="${p.data}" alt=""><i>${i+j+1}</i>`:`<span class="none">無照片</span>`}</div>`));y+=rowH}
  const total=1+pages.length;const ftr=i=>`<div class="ftr"><span>${esc(pt.footer||'')}</span><span>${pt.pageNo!==false?`第 ${i} / ${total} 頁`:''}</span></div>`;
  const fs=`font-size:${pt.fs||12}px`;
- const p1=`<div class="page" style="${fs}">${hd}<div class="ib" style="grid-template-columns:repeat(${n},1fr)">${info.map(([l,v])=>`<div>${l?`<small>${l}</small><b>${esc(v||'')}</b>`:''}</div>`).join('')}</div>
- <div class="sec">車輛配備</div><div class="cks" style="grid-template-columns:repeat(${pt.equipCols||7},1fr)">${eq}</div>
- <div class="dgr" style="margin-top:8px"><div><div class="sec" style="margin-top:0">車身外觀</div><img src="${pe}" style="height:${pt.dgH||400}px" alt="車身外觀"></div><div><div class="sec" style="margin-top:0">車體結構</div><img src="${ps}" style="height:${pt.dgH||400}px" alt="車體結構"></div></div>
- <div class="sec">機能件檢查</div><div class="cks" style="grid-template-columns:repeat(${pt.funcCols||4},1fr)">${fn}</div>
- <div style="display:grid;grid-template-columns:1fr 200px;gap:12px;margin-top:8px"><div class="note"><b>檢查註記</b>　板金片數：<b>${sheetOf(ins)}</b> 片　輪胎更換數：<b>${ins.tires||0}</b> 條<div style="margin-top:4px">${notes||'<span style="color:#888">無</span>'}</div></div><div class="note" style="text-align:center"><b>查定師簽章</b><div style="margin-top:18px">${esc(ins.inspectorName||'')}</div></div></div>${ftr(1)}</div>`;
+ const dgH=Math.min(pt.dgH||440,470);
+ const p1=`<div class="page" style="${fs}">${hd}${grid}
+ <div class="cks" style="grid-template-columns:repeat(${pt.equipCols||7},1fr);margin-top:6px">${eq}</div>
+ <div class="dgr" style="margin-top:8px"><div><div class="sec" style="margin:0 0 2px">車身外觀</div><img src="${pe}" style="height:${dgH}px" alt="車身外觀"></div><div><div class="sec" style="margin:0 0 2px">車體結構</div><img src="${ps}" style="height:${dgH}px" alt="車體結構"></div></div>
+ <div class="fg" style="grid-template-columns:repeat(${fcols},1fr);margin-top:8px">${fcells.join('')}</div>
+ <div class="bt"><div class="bx"><div class="nt">檢查註記</div><div class="nl">建議鈑修片數：( <b>${sheetOf(ins)}</b> )　建議輪胎更換數：( <b>${ins.tires||0}</b> ) 1.6mm↓</div><div class="nbody">${notes}</div></div><div><div class="bx"><div class="nt">查定師簽章</div><div class="sg">${esc(ins.inspectorName||'')}　${fmtD(ins.date)}</div></div>${legend}</div></div>${ftr(1)}</div>`;
  const pp=pages.map((items,i)=>`<div class="page" style="${fs}"><div class="hd" style="margin-bottom:10px"><div style="flex:1;font-weight:700">車輛照片　${esc(ins.plate||'')} ${esc(ins.brand||'')} ${esc(ins.model||'')}</div><div class="co">${esc(pt.company||'')}</div></div><div class="pg" style="grid-template-columns:repeat(${cols},1fr)">${items.join('')}</div>${ftr(i+2)}</div>`).join('');
  return p1+pp}
 function fitRpt(box,el){const k=Math.min(1,(box.clientWidth-2)/794);el.style.width='794px';el.style.marginLeft=k>=1?Math.max(0,(box.clientWidth-794)/2)+'px':'0';el.style.transform=`scale(${k})`;el.style.transformOrigin='top left';box.style.height=Math.ceil(el.scrollHeight*k)+'px'}
@@ -477,7 +523,7 @@ function listResults(){const L=sortIns(S.inspections.filter(i=>matchQ(i,S.q)));r
 function listHTML(){const q=S.q;const I=(l,k,t='text',x='')=>`<label class="f">${l}<input data-q="${k}" type="${t}" value="${esc(q[k]??'')}" ${x}></label>`;
  const Sx=(l,k,o)=>`<label class="f">${l}<select data-q="${k}"><option value=""></option>${o.map(a=>{const v=Array.isArray(a)?a:[a,a];return`<option value="${esc(v[0])}" ${q[k]===v[0]?'selected':''}>${esc(v[1])}</option>`}).join('')}</select></label>`;
  return`<div class="bar" style="margin-bottom:12px"><h1>查定列表</h1><span class="sp"></span>${can('compare')&&S.cmp.length>=2?`<button class="btn" data-act="goCmp">比較所選（${S.cmp.length}）</button>`:''}${can('create')?`<button class="btn pri" data-act="new">＋ 新增查定</button>`:''}</div>
- <details class="card flt" ${window.innerWidth>=900?'open':''}><summary>搜尋條件</summary><div class="g basic" style="margin-top:10px">${I('車牌','plate')}${Sx('廠牌','brand',S.brands.map(b=>b.name))}${I('車型','model')}${Sx('查定師','insp',S.users.map(u=>[u.id,u.name]))}${Sx('評價','rating',S.cfg.carRatings)}${I('日期（起）','from','date')}${I('日期（迄）','to','date')}${Sx('傳動','drive',['2WD','4WD'])}${I('里程（最小）','kmMin','number','inputmode="numeric"')}${I('里程（最大）','kmMax','number','inputmode="numeric"')}${Sx('狀態','status',[['draft','草稿'],['done','已完成']])}<div class="f">&nbsp;<button class="btn" data-act="clrq">清除條件</button></div></div></details>
+ <details class="card flt" ${window.innerWidth>=900&&getLayout()!=='m'?'open':''}><summary>搜尋條件</summary><div class="g basic" style="margin-top:10px">${I('車牌','plate')}${Sx('廠牌','brand',S.brands.map(b=>b.name))}${I('車型','model')}${Sx('查定師','insp',S.users.map(u=>[u.id,u.name]))}${Sx('評價','rating',S.cfg.carRatings)}${I('日期（起）','from','date')}${I('日期（迄）','to','date')}${Sx('傳動','drive',['2WD','4WD'])}${I('里程（最小）','kmMin','number','inputmode="numeric"')}${I('里程（最大）','kmMax','number','inputmode="numeric"')}${Sx('狀態','status',[['draft','草稿'],['done','已完成']])}<div class="f">&nbsp;<button class="btn" data-act="clrq">清除條件</button></div></div></details>
  <div id="lres">${listResults()}</div>`}
 function dashHTML(){const r=sortIns(S.inspections).slice(0,5);return`<div class="bar" style="margin-bottom:12px"><h1>儀表板</h1><span class="sp"></span>${can('create')?`<button class="btn pri" data-act="new">＋ 新增查定</button>`:''}</div>${statsHTML()}<h2 style="margin:18px 0 8px">最近的查定</h2>${r.length?r.map(i=>rowHTML(i,{noCk:1})).join(''):'<div class="empty">還沒有查定紀錄。按「新增查定」開始第一筆。</div>'}`}
 function histHTML(){const p=S.hist;const L=sortIns(S.inspections.filter(i=>(i.plate||'').toUpperCase()===p.toUpperCase()));
@@ -498,12 +544,12 @@ async function cmpHTML(){const L=S.cmp.map(id=>S.inspections.find(i=>i.id===id))
  row('配備',(i,p)=>`${eqOn(i).length} 項`+(p?setDiff(eqOn(p),eqOn(i)):'')),
  row('機能件異常',(i,p)=>`${fnOn(i).length} 項`+(fnOn(i).length?`<br><span class="sm">${fnOn(i).map(esc).join('、')}</span>`:'')+(p?setDiff(fnOn(p),fnOn(i)):'')),
  row('車況註記',(i,p)=>(i.phrases.length?i.phrases.map(x=>esc(withDot(x))).join('<br>'):'<span class="mut">無</span>')+(p?setDiff(p.phrases,i.phrases):'')),
- row('照片',(i,p,k)=>`${P[k].length} 張<div class="pgrid" style="grid-template-columns:repeat(2,1fr)">${P[k].slice(0,4).map(x=>`<div class="ph" style="cursor:default"><img src="${x.data}" alt=""></div>`).join('')}</div>`)].join('');
+ row('照片',(i,p,k)=>`${P[k].length} 張<div class="pgrid" style="grid-template-columns:repeat(2,1fr)">${P[k].slice(0,4).map(x=>`<div class="ph" style="cursor:default"><img src="${x.thumb||x.data}" alt=""></div>`).join('')}</div>`)].join('');
  return`<div class="bar" style="margin-bottom:12px"><h1>車況比較</h1><span class="sp"></span><button class="btn s" data-act="clrcmp">重新選擇</button></div><div class="cmp"><table><thead><tr><th></th>${L.map(i=>`<th>${esc(i.plate)}<br><span class="mut sm">${esc(i.brand)} ${esc(i.model)}</span></th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><p class="sm mut">橘色為與前一筆相比的變化；綠色為減少或移除。</p>`}
 async function photosHTML(){const c=await photoCounts();const L=sortIns(S.inspections);S.pc=c;
  return`<div class="bar" style="margin-bottom:12px"><h1>照片管理</h1><span class="sp"></span>${can('photoDl')?`<button class="btn pri" data-act="zipSel">批次下載所選</button>`:''}</div>`+(L.length?L.map(i=>`<div class="row"><input type="checkbox" data-act="phck" data-id="${i.id}" ${S.phSel?.includes(i.id)?'checked':''} aria-label="選取 ${esc(i.plate)}"><div class="plate">${esc(i.plate||'（無車牌）')}</div><div class="meta">${esc(i.brand)} ${esc(i.model)}　${fmtD(i.date)}<br>照片 ${c[i.id]||0} 張</div><div class="bar"><button class="btn s" data-act="phv" data-id="${i.id}">查看</button>${can('photoDl')?`<button class="btn s" data-act="zip1" data-id="${i.id}">下載 ZIP</button>`:''}</div></div>`).join(''):'<div class="empty">尚無查定紀錄</div>')}
-async function viewPhotos(id){const i=S.inspections.find(x=>x.id===id);S.ph=await photosOf(id);const cats=[...new Set([...S.cfg.photoCats.map(c=>c.n),...S.ph.map(p=>p.cat)])];
- const o=modal(`<div class="bar"><h2>${esc(i.plate)} 照片（${S.ph.length}）</h2><span class="sp"></span><button class="btn s" data-x="close">關閉</button></div>`+cats.map(c=>{const a=phOf(c);return a.length?`<h3 style="margin:14px 0 4px">${esc(c)}（${a.length}）</h3><div class="pgrid">${a.map((p,k)=>`<div class="ph" style="cursor:pointer"><img src="${p.data}" alt="" data-act="lb" data-id="${p.id}"><span class="n">${k+1}</span></div>`).join('')}</div>`:''}).join('')||'<div class="empty" style="margin-top:12px">沒有照片</div>');o.addEventListener('click',e=>{if(e.target.closest('[data-x]'))closeModal()})}
+async function viewPhotos(id){const i=S.inspections.find(x=>x.id===id);S.ph=await photosOf(id);const a=phOf();
+ const o=modal(`<div class="bar"><h2>${esc(i.plate)} 照片（${a.length}）</h2><span class="sp"></span><button class="btn s" data-x="close">關閉</button></div>`+(a.length?`<div class="pgrid">${a.map((p,k)=>`<div class="ph" style="cursor:pointer"><img src="${p.thumb||p.data}" alt="" data-act="lb" data-id="${p.id}"><span class="n">${k+1}</span></div>`).join('')}</div>`:'<div class="empty" style="margin-top:12px">沒有照片</div>'));o.addEventListener('click',e=>{if(e.target.closest('[data-x]'))closeModal()})}
 
 /* ---------- admin views ---------- */
 const FUELS=['汽油','柴油','油電','插電式油電','純電','LPG'],DRIVES=['2WD','4WD'];
@@ -522,9 +568,9 @@ function tplsHTML(){return`<div class="bar" style="margin-bottom:12px"><h1>車�
 function tplEditHTML(){const t=S.te;const I=(l,k,ty='text',x='')=>`<label class="f">${l}<input data-te="${k}" type="${ty}" value="${esc(t[k])}" ${x}></label>`;const Sl=(l,k,o)=>`<label class="f">${l}<select data-te="${k}">${o.map(x=>`<option ${t[k]===x?'selected':''}>${x}</option>`).join('')}</select></label>`;
  return`<div class="bar" style="margin-bottom:12px"><button class="btn s" data-act="tBack">← 返回</button><h1>${esc(t.name)} 標記點管理</h1><span class="sp"></span><button class="btn" data-act="tReset">重設為標準位置</button><button class="btn pri" data-act="tSave">儲存模板</button></div><div class="card g basic">${I('模板名稱','name')}${I('車型類別','type')}${Sl('字型','ff',['Arial','Helvetica','Verdana','Tahoma','Noto Sans TC'])}${Sl('粗細','fw',['bold','normal'])}${I('字體大小(px)','fs','number','min="8" max="120"')}${I('字體顏色','color','color','style="padding:2px"')}</div><div class="dgs" style="margin-top:12px">${dgBlock('ext','tpl',true)}${dgBlock('str','tpl',true)}</div>`}
 /* pdf templates */
-function pdfTplsHTML(){return`<div class="bar" style="margin-bottom:12px"><h1>PDF 報告模板</h1><span class="sp"></span>${can('pdfTpl')?'<button class="btn pri" data-act="pAdd">＋ 新增模板</button>':''}</div>`+S.pdfTpls.map(t=>`<div class="row"><div class="plate" style="min-width:130px">${esc(t.name)}</div><div class="meta">${t.isDefault?'<span class="pill g">預設</span> ':''}${t.active?'':'<span class="pill r">停用</span> '}${esc(t.company)}・${esc(t.title)}<br>基本資料 ${t.basicCols} 欄・配備 ${t.equipCols} 欄・機能件 ${t.funcCols} 欄・照片 ${t.photoCols} 欄${t.logo?'・已上傳 Logo':''}</div>${can('pdfTpl')?`<div class="bar"><button class="btn s" data-act="pPv" data-id="${t.id}">預覽</button><button class="btn s pri" data-act="pEd" data-id="${t.id}">編輯</button><button class="btn s" data-act="pLg" data-id="${t.id}">Logo</button><button class="btn s" data-act="pCp" data-id="${t.id}">複製</button>${t.isDefault?'':`<button class="btn s" data-act="pDf" data-id="${t.id}">設為預設</button>`}<button class="btn s" data-act="pTg" data-id="${t.id}">${t.active?'停用':'啟用'}</button><button class="btn s dan" data-act="pDl" data-id="${t.id}">刪除</button></div>`:''}</div>`).join('')}
-const PF=[{k:'name',l:'模板名稱',req:1},{k:'company',l:'公司名稱'},{k:'title',l:'報告標題'},{k:'font',l:'字體',t:'select',o:['Noto Sans TC','Microsoft JhengHei','PingFang TC','Arial','serif']},{k:'fs',l:'字體大小(px)',t:'number',min:9,max:16},{k:'basicCols',l:'基本資料排列（每排欄數）',t:'select',o:[2,3,4,5,6]},{k:'equipCols',l:'配備排列（每排欄數）',t:'select',o:[4,5,6,7,8]},{k:'funcCols',l:'機能件排列（每排欄數）',t:'select',o:[2,3,4,5]},{k:'dgH',l:'車身圖高度(px)',t:'number',min:250,max:520},{k:'photoCols',l:'照片排列（每排張數）',t:'select',o:[2,3,4]},{k:'photoH',l:'照片高度(px)',t:'number',min:90,max:320},{k:'footer',l:'頁尾文字'},{k:'pageNo',l:'顯示頁碼',t:'check'},{k:'active',l:'啟用',t:'check'}];
-async function pdfForm(t,title){const r=await askForm(title,PF,t);if(!r)return null;delete r._f;['basicCols','equipCols','funcCols','photoCols'].forEach(k=>r[k]=Number(r[k]));return{...t,...r}}
+function pdfTplsHTML(){return`<div class="bar" style="margin-bottom:12px"><h1>PDF 報告模板</h1><span class="sp"></span>${can('pdfTpl')?'<button class="btn pri" data-act="pAdd">＋ 新增模板</button>':''}</div>`+S.pdfTpls.map(t=>`<div class="row"><div class="plate" style="min-width:130px">${esc(t.name)}</div><div class="meta">${t.isDefault?'<span class="pill g">預設</span> ':''}${t.active?'':'<span class="pill r">停用</span> '}${esc(t.company)}・${esc(t.title)}<br>配備 ${t.equipCols} 欄・機能件 ${t.funcCols} 欄・照片 ${t.photoCols} 欄${t.logo?'・已上傳 Logo':''}</div>${can('pdfTpl')?`<div class="bar"><button class="btn s" data-act="pPv" data-id="${t.id}">預覽</button><button class="btn s pri" data-act="pEd" data-id="${t.id}">編輯</button><button class="btn s" data-act="pLg" data-id="${t.id}">Logo</button><button class="btn s" data-act="pCp" data-id="${t.id}">複製</button>${t.isDefault?'':`<button class="btn s" data-act="pDf" data-id="${t.id}">設為預設</button>`}<button class="btn s" data-act="pTg" data-id="${t.id}">${t.active?'停用':'啟用'}</button><button class="btn s dan" data-act="pDl" data-id="${t.id}">刪除</button></div>`:''}</div>`).join('')}
+const PF=[{k:'name',l:'模板名稱',req:1},{k:'company',l:'公司名稱'},{k:'title',l:'報告標題'},{k:'font',l:'字體',t:'select',o:['Noto Sans TC','Microsoft JhengHei','PingFang TC','Arial','serif']},{k:'fs',l:'字體大小(px)',t:'number',min:9,max:16},{k:'equipCols',l:'配備排列（每排欄數）',t:'select',o:[4,5,6,7,8]},{k:'funcCols',l:'機能件排列（每排欄數）',t:'select',o:[2,3,4,5]},{k:'dgH',l:'車身圖高度(px)',t:'number',min:250,max:470},{k:'photoCols',l:'照片排列（每排張數）',t:'select',o:[1,2,3,4]},{k:'photoH',l:'照片高度(px)',t:'number',min:90,max:320},{k:'footer',l:'頁尾文字'},{k:'pageNo',l:'顯示頁碼',t:'check'},{k:'active',l:'啟用',t:'check'}];
+async function pdfForm(t,title){const r=await askForm(title,PF,t);if(!r)return null;delete r._f;['equipCols','funcCols','photoCols'].forEach(k=>r[k]=Number(r[k]));return{...t,...r}}
 /* users */
 function usersHTML(){return`<div class="bar" style="margin-bottom:12px"><h1>帳號管理</h1><span class="sp"></span><button class="btn pri" data-act="uAdd">＋ 新增帳號</button></div>`+S.users.map(u=>{const n=S.inspections.filter(i=>i.inspectorId===u.id).length;return`<div class="row" style="${u.active?'':'opacity:.6'}"><div class="plate" style="min-width:110px;font-size:1rem">${esc(u.username)}</div><div class="meta"><b>${esc(u.name)}</b> <span class="pill">${esc(u.role)}</span> ${u.active?'':'<span class="pill r">停用</span>'}<br>最後登入 ${fmtT(u.last)}　建立 ${fmtT(u.created)}　查定紀錄 ${n} 筆</div><div class="bar"><button class="btn s pri" data-act="uEd" data-id="${u.id}">編輯</button><button class="btn s" data-act="uPw" data-id="${u.id}">重設密碼</button><button class="btn s" data-act="uRec" data-id="${u.id}">查定紀錄</button><button class="btn s" data-act="uTg" data-id="${u.id}">${u.active?'停用':'啟用'}</button><button class="btn s dan" data-act="uDl" data-id="${u.id}">刪除</button></div></div>`}).join('')}
 async function userForm(u){const isNew=!u;u=u||{username:'',name:'',role:'查定師',active:true,perms:permObj(ROLES['查定師'])};
@@ -538,22 +584,30 @@ async function userForm(u){const isNew=!u;u=u||{username:'',name:'',role:'查定
 /* settings */
 const lines=s=>String(s).split('\n').map(x=>x.trim()).filter(Boolean);
 function settingsHTML(){const c=S.cfg;const T=(l,k,v,h)=>`<label class="f">${l}<textarea data-set="${k}" rows="6">${esc(v)}</textarea><span class="mut sm" style="font-weight:400">${h}</span></label>`;
- return`<div class="bar" style="margin-bottom:12px"><h1>系統設定</h1><span class="sp"></span><button class="btn pri" data-act="setSave">儲存設定</button></div><div class="g c2">${T('車輛評價選項','carRatings',c.carRatings.join('\n'),'每行一項')}${T('內裝評價選項','intRatings',c.intRatings.join('\n'),'每行一項')}${T('配備設定','equipment',c.equipment.map(e=>e.n+(e.x?'|'+e.x:'')).join('\n'),'每行一項；需填數量／尺寸的用「名稱|欄位名」')}${T('機能件設定','funcs',c.funcs.map(f=>f.g+'|'+f.n).join('\n'),'每行「分類|項目」')}${T('車況片語','phrases',c.phrases.join('\n'),'每行一句，不需加句號')}${T('照片分類','photoCats',c.photoCats.map(p=>p.n+'|'+p.slots).join('\n'),'每行「分類|預期張數」；預期張數不足時 PDF 顯示「無照片」')}</div>
+ return`<div class="bar" style="margin-bottom:12px"><h1>系統設定</h1><span class="sp"></span><button class="btn pri" data-act="setSave">儲存設定</button></div><div class="g c2">${T('車輛評價選項','carRatings',c.carRatings.join('\n'),'每行一項')}${T('內裝評價選項','intRatings',c.intRatings.join('\n'),'每行一項')}${T('配備設定','equipment',c.equipment.map(e=>e.n+(e.x?'|'+e.x:'')).join('\n'),'每行一項；需填數量／尺寸的用「名稱|欄位名」')}${T('機能件設定','funcs',c.funcs.map(f=>f.g+'|'+f.n).join('\n'),'每行「分類|項目」')}${T('車況片語','phrases',c.phrases.join('\n'),'每行一句，不需加句號')}${T('標記代號說明（PDF 右下角）','legend',legendList().map(x=>x.c+'|'+x.d).join('\n'),'每行「代號|說明」，說明建議 4 字內；說明留空的代號不會顯示在 PDF')}</div>
  <div class="card" style="margin-top:14px"><h3 style="margin-bottom:8px">資料備份</h3><p class="sm mut" style="margin-top:0">所有資料存在這台裝置的瀏覽器中。請定期匯出備份（含照片與 PDF 設定）。</p><div class="bar"><button class="btn" data-act="bkOut">匯出備份</button><button class="btn" data-act="bkIn">匯入備份</button></div></div>
  <div class="card"><h3 style="margin-bottom:8px">顯示</h3><div class="bar"><button class="btn" data-act="theme" data-v="">跟隨系統</button><button class="btn" data-act="theme" data-v="light">淺色</button><button class="btn" data-act="theme" data-v="dark">深色</button></div></div>`}
 async function saveSettings(){const g=k=>lines($(`[data-set="${k}"]`).value);const c=S.cfg;
- c.carRatings=g('carRatings');c.intRatings=g('intRatings');c.equipment=g('equipment').map(l=>{const[n,x]=l.split('|');return{n:n.trim(),x:(x||'').trim()}});c.funcs=g('funcs').map(l=>{const[a,b]=l.split('|');return b?{g:a.trim(),n:b.trim()}:{g:'其他',n:a.trim()}});c.phrases=g('phrases');c.photoCats=g('photoCats').map(l=>{const[n,s]=l.split('|');return{n:n.trim(),slots:Number(s)||0}});await saveCfg();log('修改系統設定');toast('設定已儲存')}
+ c.carRatings=g('carRatings');c.intRatings=g('intRatings');c.equipment=g('equipment').map(l=>{const[n,x]=l.split('|');return{n:n.trim(),x:(x||'').trim()}});c.funcs=g('funcs').map(l=>{const[a,b]=l.split('|');return b?{g:a.trim(),n:b.trim()}:{g:'其他',n:a.trim()}});c.phrases=g('phrases');c.legend=g('legend').map(l=>{const[a,...b]=l.split('|');return{c:(a||'').trim(),d:b.join('|').trim()}}).filter(x=>x.c);await saveCfg();log('修改系統設定');toast('設定已儲存')}
 async function backupOut(){toast('準備備份…',15000);const d={ver:1,at:Date.now(),stores:{}};for(const s of STORES)d.stores[s]=await dbAll(s);const ok=await saveFile(`查定系統備份_${today()}.json`,new Blob([JSON.stringify(d)],{type:'application/json'}));if(ok){toast('備份已匯出');log('匯出備份')}}
 async function backupIn(f){try{const d=JSON.parse(await f.text());if(!d.stores)throw 0;if(!await confirmBox('匯入會以備份內容覆蓋相同編號的資料，確定繼續？','匯入'))return;for(const s of STORES)for(const o of d.stores[s]||[])await dbPut(s,o);await loadAll();S.me=S.users.find(u=>u.id===S.me.id)||S.me;log('匯入備份');toast('匯入完成');render()}catch(e){toast('備份檔格式不正確')}}
 function logsHTML(){return`<div class="bar" style="margin-bottom:12px"><h1>操作紀錄</h1><span class="sp"></span><input class="inp" style="width:220px" data-lg placeholder="搜尋（使用者／動作）" value="${esc(S.lgq||'')}"></div><div id="lgl">${logList()}</div>`}
 function logList(){const q=(S.lgq||'').toLowerCase();const a=[...S.logs].sort((x,y)=>y.ts-x.ts).filter(l=>!q||(l.user+l.action+l.detail).toLowerCase().includes(q)).slice(0,300);return a.map(l=>`<div class="row" style="padding:8px 12px;margin-bottom:4px"><span class="mut sm" style="min-width:120px">${fmtT(l.ts)}</span><b style="min-width:80px">${esc(l.user)}</b><span>${esc(l.action)}</span><span class="mut">${esc(l.detail)}</span></div>`).join('')||'<div class="empty">沒有紀錄</div>'}
 
+/* ---------- layout switch ---------- */
+const LAYOUTS=[['auto','自動','依螢幕大小自動切換'],['m','手機版','固定用手機版面（在電腦上會置中成手機寬度）'],['d','電腦版','固定用電腦版面（在手機上會縮小顯示整個畫面）']];
+let _lay=null;
+function getLayout(){if(_lay)return _lay;let v='auto';try{v=localStorage.getItem('ky_layout')||'auto'}catch(e){}_lay=LAYOUTS.some(l=>l[0]===v)?v:'auto';return _lay}
+const layoutName=()=>LAYOUTS.find(l=>l[0]===getLayout())[1];
+function applyLayout(){const m=getLayout();document.documentElement.classList.toggle('m',m==='m');const mv=document.querySelector('meta[name=viewport]');if(mv)mv.setAttribute('content',m==='d'?'width=1200, initial-scale=1, viewport-fit=cover':'width=device-width, initial-scale=1, viewport-fit=cover')}
+function setLayout(v){_lay=v;try{localStorage.setItem('ky_layout',v)}catch(e){}applyLayout();render()}
+function layoutPop(){const cur=getLayout();const o=modal(`<h3 style="margin-bottom:10px">選擇版面</h3>${LAYOUTS.map(([k,l,d])=>`<button class="btn" style="width:100%;height:auto;min-height:56px;padding:8px 14px;margin-bottom:8px;flex-direction:column;align-items:flex-start;white-space:normal;${k===cur?'border-color:var(--acc);background:var(--accbg)':''}" data-lay="${k}"><b>${l}${k===cur?' ✓':''}</b><span class="sm mut" style="font-weight:400;text-align:left">${d}</span></button>`).join('')}<div class="bar"><span class="sp"></span><button class="btn" data-lay="x">關閉</button></div>`);o.firstElementChild.style.width='min(380px,100%)';o.addEventListener('click',e=>{const b=e.target.closest('[data-lay]');if(!b)return;closeModal();if(b.dataset.lay!=='x')setLayout(b.dataset.lay)})}
 /* ---------- shell & router ---------- */
 const NAV=[['dash','儀表板','📊',()=>can('view')],['list','查定列表','📋',()=>can('view')],['new','新增查定','➕',()=>can('create')],['cmp','車況比較','⚖️',()=>can('compare')],['photos','照片管理','📷',()=>can('view')],['brands','廠牌車型','🚘',()=>can('brands')||can('models')],['tpls','車身標記','🔧',()=>can('marks')],['pdfTpls','PDF模板','📄',()=>can('pdfTpl')],['users','帳號管理','👤',()=>can('users')],['logs','操作紀錄','🧾',()=>can('users')],['settings','系統設定','⚙️',()=>can('system')]];
 const TITLES={dash:'儀表板',list:'查定列表',edit:'查定',hist:'查定歷史',cmp:'車況比較',photos:'照片管理',brands:'廠牌車型',tpls:'車身標記',tplEdit:'標記點管理',pdfTpls:'PDF模板',users:'帳號管理',logs:'操作紀錄',settings:'系統設定'};
 const GATE={dash:'view',list:'view',edit:'edit',hist:'history',cmp:'compare',photos:'view',tpls:'marks',tplEdit:'marks',pdfTpls:'pdfTpl',users:'users',logs:'users',settings:'system'};
 function go(v){if(S.view==='edit'&&v!=='edit')persistCur();S.view=v;S.sel=null;S.menu=false;window.scrollTo(0,0);render()}
-function loginHTML(){return`<div class="login"><form class="card" id="lf"><h1 style="margin-bottom:18px">車輛查定管理系統</h1><label class="f">帳號<input name="u" autocomplete="username" autocapitalize="off" required></label><label class="f" style="margin-top:12px">密碼<input name="p" type="password" autocomplete="current-password" required></label><p id="lerr" class="sm" style="color:var(--bad);min-height:1.4em;margin:8px 0" role="alert"></p><button class="btn pri" style="width:100%">登入</button></form></div>`}
+function loginHTML(){return`<div class="login"><form class="card" id="lf"><h1 style="margin-bottom:18px">車輛查定管理系統</h1><label class="f">帳號<input name="u" autocomplete="username" autocapitalize="off" required></label><label class="f" style="margin-top:12px">密碼<input name="p" type="password" autocomplete="current-password" required></label><p id="lerr" class="sm" style="color:var(--bad);min-height:1.4em;margin:8px 0" role="alert"></p><button class="btn pri" style="width:100%">登入</button><button type="button" class="btn s" data-act="layout" style="width:100%;margin-top:12px">📱 版面：${layoutName()}</button></form></div>`}
 async function viewHTML(){const v=S.view;const g=GATE[v];if(v==='edit'?!(can('edit')||can('create')):(g&&!can(g)))return'<div class="empty">你沒有使用這個功能的權限。</div>';
  switch(v){case'dash':return dashHTML();case'list':return listHTML();case'edit':return S.cur?editHTML():'';case'hist':return histHTML();case'cmp':return cmpHTML();case'photos':return photosHTML();case'brands':return can('brands')||can('models')?brandsHTML():'<div class="empty">你沒有使用這個功能的權限。</div>';case'tpls':return tplsHTML();case'tplEdit':return tplEditHTML();case'pdfTpls':return pdfTplsHTML();case'users':return usersHTML();case'settings':return settingsHTML();case'logs':return logsHTML()}return''}
 function syncInfo(){const n=S.inspections.filter(i=>!i.synced).length;if(!S.online)return['off',`離線・${n} 筆待同步`];if(S.sync==='syncing')return['',`同步中…`];if(S.sync==='fail')return['bad','同步失敗，點此重新同步'];if(S.sync==='done')return['ok','同步完成'];return n?['off',`${n} 筆待同步・點此同步`]:['ok','已同步']}
@@ -563,7 +617,7 @@ async function render(){const app=$('#app');if(!S.me){app.innerHTML=loginHTML();
  const items=NAV.filter(n=>n[3]());const on=v=>v===S.view||(v==='list'&&['hist'].includes(S.view))||(v==='new'&&S.view==='edit'&&S.isNew)||(v==='tpls'&&S.view==='tplEdit');
  const side=`<aside class="side ${S.menu?'open':''}" id="side"><div class="brand"><b>冠</b><span>車輛查定系統</span></div>${items.map(([id,l,ic])=>`<a class="nv ${on(id)?'on':''}" tabindex="0" role="link" data-act="${id==='new'?'new':'nav'}" data-v="${id}"><span aria-hidden="true">${ic}</span>${l}</a>`).join('')}<div class="grp">${esc(S.me.name)}・${esc(S.me.role)}</div><a class="nv" tabindex="0" role="link" data-act="chpw">🔑 修改密碼</a><a class="nv" tabindex="0" role="link" data-act="logout">🚪 登出</a></aside>`;
  const bn=[['list','📋','查定'],['new','➕','新增'],['cmp','⚖️','比較'],['menu','☰','選單']];
- app.innerHTML=`<div class="shell ${S.view==='edit'?'nb':''}">${side}<div class="scrim ${S.menu?'':'hide'}" data-act="menu"></div><div class="main"><header class="top"><button class="btn s menubtn" data-act="menu" aria-label="選單">☰</button><b>${TITLES[S.view]||''}</b><span class="sp"></span><span id="syncB" class="sync"></span></header><main class="content" id="content"></main></div></div>${S.view==='edit'?'':`<nav class="bnav">${bn.map(([id,ic,l])=>`<a class="${id===S.view?'on':''}" data-act="${id==='new'?'new':id==='menu'?'menu':'nav'}" data-v="${id}"><span>${ic}</span>${l}</a>`).join('')}</nav>`}`;
+ app.innerHTML=`<div class="shell ${S.view==='edit'?'nb':''}">${side}<div class="scrim ${S.menu?'':'hide'}" data-act="menu"></div><div class="main"><header class="top"><button class="btn s menubtn" data-act="menu" aria-label="選單">☰</button><b>${TITLES[S.view]||''}</b><span class="sp"></span><button class="btn s" data-act="layout" aria-label="切換版面">📱 ${layoutName()}</button><span id="syncB" class="sync"></span></header><main class="content" id="content"></main></div></div>${S.view==='edit'?'':`<nav class="bnav">${bn.map(([id,ic,l])=>`<a class="${id===S.view?'on':''}" data-act="${id==='new'?'new':id==='menu'?'menu':'nav'}" data-v="${id}"><span>${ic}</span>${l}</a>`).join('')}</nav>`}`;
  updSync();const html=await viewHTML();const c=$('#content');if(!c)return;c.innerHTML=html;
  if(S.view==='edit'){if(S.step===2||S.step===3)redrawDg();if(S.step===8)previewReport()}if(S.view==='tplEdit')redrawDg()}
 async function refreshContent(){const y=window.scrollY;const c=$('#content');c.innerHTML=await viewHTML();window.scrollTo(0,y)}
@@ -577,7 +631,7 @@ document.addEventListener('click',async e=>{
  case'nav':go(t.dataset.v);break;case'menu':S.menu=!S.menu;$('#side')?.classList.toggle('open',S.menu);$('.scrim')?.classList.toggle('hide',!S.menu);break;
  case'logout':await log('登出');await persistCur();S.me=null;S.cur=null;sessSet(null);S.menu=false;render();break;
  case'chpw':{const r=await askForm('修改密碼',[{k:'o',l:'目前密碼',t:'password',req:1},{k:'n',l:'新密碼',t:'password',req:1}]);if(!r)break;if(S.me.pwd!==await sha(r.o))return toast('目前密碼不正確');S.me.pwd=await sha(r.n);await save('users',S.me);log('修改密碼');toast('密碼已更新');break}
- case'syncNow':syncNow();break;
+ case'syncNow':syncNow();break;case'layout':layoutPop();break;
  case'new':if(!can('create'))return toast('沒有新增查定的權限');S.menu=false;openEdit();break;
  case'edit':openEdit(id);break;case'rp':reportModal(id);break;
  case'hist':S.hist=t.dataset.p;go('hist');break;
@@ -669,7 +723,7 @@ window.addEventListener('pagehide',()=>persistCur());
 window.addEventListener('online',()=>{S.online=true;updSync();toast('網路已恢復，開始同步');syncNow()});
 window.addEventListener('offline',()=>{S.online=false;updSync();toast('目前離線：資料會先存在這台裝置')});
 window.addEventListener('resize',()=>{const b=$('#rptBox'),e=$('#rptPrev');if(b&&e)fitRpt(b,e)});
-(async()=>{await openDB();await loadAll();await seed();restore();render();if(S.me)syncNow()})();
+(async()=>{applyLayout();await openDB();await loadAll();await seed();restore();render();if(S.me)syncNow()})();
 
 document.addEventListener('touchmove',e=>{if(DR&&DR.m)e.preventDefault()},{passive:false});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches?.('[role=link][data-act]'))e.target.click()});
