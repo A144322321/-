@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>車輛查定管理系統</title>
+<title>車輛查定管理系統1.0.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -210,10 +210,10 @@ const fmtT=t=>{if(!t)return'—';const d=new Date(t);return d.getFullYear()+'/'+
 const fmtD=s=>s?String(s).replace(/-/g,'/'):'—';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const clone=o=>JSON.parse(JSON.stringify(o));
-const SYMS=['P','p','R','S1','S2','B','b','W','G','h','XX','X'];
-const SYMS_EXT=['P','p','R','S1','S2','B','b','W','G','h','XX'];
+const SYMS=['P','[p]','R','S1','S2','B','b','W','G','h','XX','X'];
+const SYMS_EXT=['P','[p]','R','S1','S2','B','b','W','G','h','XX'];
 const SYMS_STR=['P','R','S1','S2','B','b','W','G','h','XX','X'];
-const PANEL=['P','p','B','S1','S2','G'];
+const PANEL=['P','B','S1','S2','G'];
 const STEPS=['基本資料','配備','車身外觀','車體結構','機能件','車況註記','車輛照片','查定確認','PDF'];
 const PERMS=[['view','查定資料查看'],['create','新增查定'],['edit','編輯查定'],['delete','刪除查定'],['pdf','PDF產出'],['pdfDl','PDF下載'],['photoDl','照片下載'],['history','查定歷史紀錄'],['compare','車況比較'],['brands','廠牌管理'],['models','車型管理'],['marks','車身標記點管理'],['pdfTpl','PDF模板管理'],['users','帳號管理'],['system','系統設定']];
 const ALLP=PERMS.map(p=>p[0]);
@@ -258,8 +258,9 @@ async function seed(){
  if(!S.pdfTpls.length)await save('pdfTpls',{id:uid(),name:'標準一頁式',company:'高雄冠宥汽車',title:'車 輛 點 檢 表',logo:'',font:'Noto Sans TC',fs:12,basicCols:5,equipCols:7,funcCols:4,dgH:460,photoCols:3,photoH:170,footer:'',pageNo:true,isDefault:true,active:true});
  if(S.cfg&&!S.cfg.mig6){const mp={FF:'2WD',FR:'2WD',RR:'2WD',MR:'2WD',AWD:'4WD'};for(const m of S.models)if(mp[m.drive]){m.drive=mp[m.drive];await save('models',m)}for(const i of S.inspections)if(mp[i.drive]){i.drive=mp[i.drive];await save('inspections',i)}for(const t of S.templates){t.marks=[...t.marks.filter(m=>m.view!=='ext'),...extSlots()];await save('templates',t)}S.cfg.mig6=true;await saveCfg()}
  if(S.cfg&&!S.cfg.mig5){for(const t of S.pdfTpls)if(t.basicCols===3){t.basicCols=5;await save('pdfTpls',t)}S.cfg.mig5=true;await saveCfg()}
- if(!S.cfg){S.cfg={mig5:true,mig6:true,id:'cfg',equipment:EQUIP.map(([n,x])=>({n,x:x||''})),funcs:FUNCS.map(([g,n])=>({g,n})),phrases:[...PHR],photoCats:PCATS.map(([n,s])=>({n,slots:s})),carRatings:['A++','A+','A','B++','B+','B','C++','C+','C','N','V'],intRatings:['A','B','C','D','E','N']};await saveCfg()}
+ if(!S.cfg){S.cfg={mig5:true,mig6:true,mig8:true,id:'cfg',equipment:EQUIP.map(([n,x])=>({n,x:x||''})),funcs:FUNCS.map(([g,n])=>({g,n})),phrases:[...PHR],photoCats:PCATS.map(([n,s])=>({n,slots:s})),carRatings:['A++','A+','A','B++','B+','B','C++','C+','C','N','V'],intRatings:['A','B','C','D','E','N']};await saveCfg()}
  if(S.cfg&&!S.cfg.mig7){if(!S.cfg.carRatings.includes('V'))S.cfg.carRatings.push('V');S.cfg.mig7=true;await saveCfg()}
+ if(S.cfg&&!S.cfg.mig8){for(const i of S.inspections){if((i.marks||[]).some(m=>m.sym==='p')){i.marks.forEach(m=>{if(m.sym==='p')m.sym='[p]'});await save('inspections',i)}}S.cfg.mig8=true;await saveCfg()}
 }
 /* ---------- auth ---------- */
 async function sha(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ky:'+s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return'p:'+s}}
@@ -337,8 +338,8 @@ function symPop(v,grp,x,y){
  const pal=v==='ext'?SYMS_EXT:SYMS_STR;const cur=grp.map(m=>m.sym);const opts=[...pal,...cur.filter(q=>!pal.includes(q))];const sel=new Set(cur);
  const cx=grp.length?grp.reduce((a,m)=>a+m.x,0)/grp.length:x,cy=grp.length?grp.reduce((a,m)=>a+m.y,0)/grp.length:y;
  const o=modal(`<div style="font-weight:700;margin-bottom:10px">選擇標記（可複選）</div><div class="chips" id="spc">${opts.map(q=>`<button type="button" class="chip sym ${sel.has(q)?'on':''}" data-s="${q}" aria-pressed="${sel.has(q)}">${q}</button>`).join('')}</div><div class="bar" style="margin-top:16px">${grp.length?'<button class="btn dan" data-x="del">刪除</button>':''}<span class="sp"></span><button class="btn" data-x="no">取消</button><button class="btn pri" data-x="ok">確定</button></div>`);
- o.style.alignItems='center';o.firstElementChild.style.width='min(360px,100%)';o.firstElementChild.style.borderRadius='14px';
- o.addEventListener('click',e=>{const c=e.target.closest('[data-s]');if(c){const q=c.dataset.s;sel.has(q)?sel.delete(q):sel.add(q);c.classList.toggle('on',sel.has(q));c.setAttribute('aria-pressed',sel.has(q));return}
+ o.style.alignItems='center';const t0=Date.now();o.firstElementChild.style.width='min(360px,100%)';o.firstElementChild.style.borderRadius='14px';
+ o.addEventListener('click',e=>{if(Date.now()-t0<300)return;const c=e.target.closest('[data-s]');if(c){const q=c.dataset.s;sel.has(q)?sel.delete(q):sel.add(q);c.classList.toggle('on',sel.has(q));c.setAttribute('aria-pressed',sel.has(q));return}
   const b=e.target.closest('[data-x]');if(!b)return;const X=b.dataset.x;if(X==='no'){closeModal();return}
   const ids=new Set(grp.map(m=>m.id));S.cur.marks=S.cur.marks.filter(m=>!ids.has(m.id));
   if(X==='ok'){const list=opts.filter(q=>sel.has(q)),n=list.length,H=svgH(v),gid=uid(),rows=Math.ceil(n/3);list.forEach((q,i)=>{const r=Math.floor(i/3),rc=Math.min(3,n-r*3),col=i%3;const px=cx+(col-(rc-1)/2)*.055,py=cy+(r-(rows-1)/2)*(46/H);S.cur.marks.push({id:uid(),view:v,sym:q,gid,x:Math.min(.98,Math.max(.02,px)),y:Math.min(.98,Math.max(.02,py))})})}
@@ -395,14 +396,14 @@ function step1(){const c=S.cur;const b=S.brands.find(x=>x.name===c.brand);const 
  ${F('查定日期','date','date')}
  <label class="f">查定師（自動帶入）<input value="${esc(c.inspectorName)}" readonly></label></div></div>`}
 function step2(){const c=S.cur;return`<div class="g eq">${S.cfg.equipment.map(e=>{const q=c.equip[e.n]||{};return`<div class="tick ${q.on?'on':''}"><label style="display:flex;gap:8px;align-items:center;flex:1;min-height:32px"><input type="checkbox" data-eq="${esc(e.n)}" ${q.on?'checked':''}>${esc(e.n)}</label>${e.x&&q.on?`<input class="ex" data-eqv="${esc(e.n)}" placeholder="${esc(e.x)}" value="${esc(q.val||'')}" aria-label="${esc(e.n)}${esc(e.x)}">${e.n==='KEY'?'支':''}`:''}</div>`}).join('')}</div>`}
-function stepDg(v){const c=S.cur;const cur=v;return`<div class="bar" style="margin-bottom:10px"><label class="f" style="flex-direction:row;align-items:center;gap:8px">車身模板<select class="inp" style="width:auto" data-act="tplsel">${S.templates.map(t=>`<option value="${t.id}" ${t.id===c.tplId?'selected':''}>${esc(t.name)}（${esc(t.type)}）</option>`).join('')}</select></label><span class="sp"></span><span>板金片數：<span class="count cnt">${sheetAuto(c.marks)}</span> 片<span class="mut sm">（P、p、B、S1、S2、G）</span></span></div><div class="dgs one">${dgBlock(v,'ins',true)}</div>`}
+function stepDg(v){const c=S.cur;const cur=v;return`<div class="bar" style="margin-bottom:10px"><label class="f" style="flex-direction:row;align-items:center;gap:8px">車身模板<select class="inp" style="width:auto" data-act="tplsel">${S.templates.map(t=>`<option value="${t.id}" ${t.id===c.tplId?'selected':''}>${esc(t.name)}（${esc(t.type)}）</option>`).join('')}</select></label><span class="sp"></span><span>板金片數：<span class="count cnt">${sheetAuto(c.marks)}</span> 片<span class="mut sm">（P、B、S1、S2、G）</span></span></div><div class="dgs one">${dgBlock(v,'ins',true)}</div>`}
 function step5(){const c=S.cfg,gs=[...new Set(c.funcs.map(f=>f.g))];const gi=Math.min(S.fgroup,gs.length-1);const g=gs[gi];
  return`<div class="tabs" role="tablist">${gs.map((x,i)=>{const n=c.funcs.filter(f=>f.g===x&&S.cur.func[f.n]).length;return`<button role="tab" class="${i===gi?'on':''}" data-act="fg" data-i="${i}">${esc(x)}${n?` (${n})`:''}</button>`}).join('')}</div><div class="g fn">${c.funcs.filter(f=>f.g===g).map(f=>`<label class="tick ${S.cur.func[f.n]?'on':''}"><input type="checkbox" data-fn="${esc(f.n)}" ${S.cur.func[f.n]?'checked':''}>${esc(f.n)}</label>`).join('')}</div>`}
 function step6(){const c=S.cur;return`<div class="card"><h3 style="margin-bottom:10px">片語（可複選）</h3><div class="chips">${S.cfg.phrases.map((p,i)=>`<button class="chip ${c.phrases.includes(p)?'on':''}" data-act="phr" data-i="${i}" aria-pressed="${c.phrases.includes(p)}">${esc(p)}</button>`).join('')}</div><div class="bar" style="margin-top:14px"><input class="inp" id="newPhr" style="flex:1;min-width:180px" placeholder="自訂片語，例如：左前葉子板烤漆"><button class="btn" data-act="addphr">新增片語</button></div></div><div class="card"><label class="f">其他說明（每行一項）<textarea data-f="notes" placeholder="需要補充的內容">${esc(c.notes)}</textarea></label></div><p class="sm mut">PDF 會將每個片語自動加上句號。</p>`}
 function step7(){return S.cfg.photoCats.map(k=>{const n=phOf(k.n).length;return`<div class="card"><div class="bar"><h3>${esc(k.n)}</h3><span class="pill ${n>=k.slots&&k.slots?'g':n?'':'w'}">${n}${k.slots?' / '+k.slots:''} 張</span><span class="sp"></span><button class="btn s pri" data-act="cam" data-cat="${esc(k.n)}">拍照</button><button class="btn s" data-act="gal" data-cat="${esc(k.n)}">選取</button></div>${thumbs(k.n)}</div>`}).join('')+`<label class="tick" style="margin-top:12px"><input type="checkbox" data-act="burst" ${S.burst?'checked':''}>連續拍照模式</label>`}
 function step8(){const c=S.cur;const sc=symCount(c.marks);const miss=S.cfg.photoCats.filter(k=>k.slots&&!phOf(k.n).length).map(k=>k.n);
  return`<div class="card"><div class="bar"><h2 class="plate">${esc(c.plate||'（未填車牌）')}</h2><span>${esc(c.brand)} ${esc(c.model)}</span><span class="sp"></span><span class="pill ${c.status==='done'?'g':'w'}">${c.status==='done'?'已完成':'草稿'}</span></div><p class="mut sm" style="margin:6px 0 0">車輛評價 ${esc(c.rating||'—')}　內裝評價 ${esc(c.interior||'—')}　里程 ${esc(c.mileage||'—')} ${c.mileage?esc(c.mUnit):''} ${esc(c.mGuar)}</p></div>
- <div class="card g c2"><div><div class="mut sm">板金片數（自動）</div><div class="count" style="font-size:2rem">${sheetAuto(c.marks)} 片</div><div class="sm mut">計入：P、p、B、S1、S2、G　不計入：R、b、W、h、XX、X</div></div>
+ <div class="card g c2"><div><div class="mut sm">板金片數（自動）</div><div class="count" style="font-size:2rem">${sheetAuto(c.marks)} 片</div><div class="sm mut">計入：P、B、S1、S2、G　不計入：[p]、R、b、W、h、XX、X</div></div>
  <div class="g" style="gap:10px"><label class="f">板金片數（留空＝使用自動值）<input data-f="sheetOv" type="number" min="0" value="${esc(c.sheetOv)}" placeholder="${sheetAuto(c.marks)}"></label><label class="f">輪胎更換數（條）<select data-f="tires">${[0,1,2,3,4].map(n=>`<option ${Number(c.tires)===n?'selected':''}>${n}</option>`).join('')}</select></label></div></div>
  <div class="card"><h3 style="margin-bottom:8px">標記統計</h3>${Object.keys(sc).length?`<div class="chips">${SYMS.filter(s=>sc[s]).map(s=>`<span class="pill ${PANEL.includes(s)?'':'g'}" style="font-size:.95rem">${s} × ${sc[s]}</span>`).join('')}</div>`:'<span class="mut">尚未標記</span>'}</div>
  <div class="card"><div class="sm">配備 ${Object.values(c.equip).filter(e=>e.on).length} 項　機能件異常 ${Object.keys(c.func).filter(k=>c.func[k]).length} 項　片語 ${c.phrases.length} 個　照片 ${S.ph.length} 張</div>${miss.length?`<div class="pill w" style="margin-top:8px">尚未拍攝：${miss.map(esc).join('、')}（PDF 會顯示「無照片」）</div>`:''}</div>
